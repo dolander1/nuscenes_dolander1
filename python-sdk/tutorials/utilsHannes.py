@@ -190,8 +190,6 @@ def remove_short_sequences(
     token_lists
         updated (shortened) token_lists for instances and samples.
     """
-    # Round up potential half seconds
-    seconds_of_history_used = math.ceil(seconds_of_history_used)
     
     # Count the occurrences of each string in the list
     string_counts = Counter(instance_token_list)
@@ -201,7 +199,7 @@ def remove_short_sequences(
 
     # Iterate over the list and save the index if the count of the item is greater than 2*seconds_of_history_used - 1
     for index, item in enumerate(instance_token_list):
-        if string_counts[item] > (2*seconds_of_history_used - 1): # One history is always avalible 
+        if string_counts[item] > (int(2*seconds_of_history_used) - 1): # One history is always avalible 
             selected_indices.append(index)
 
     # print(selected_indices)
@@ -242,10 +240,7 @@ def extract_one_instance_per_sequence(
     token_lists
         token_lists for instances and samples containing one sample per sequence.
     """
-
-    # Round up potential half seconds
-    seconds_of_history_used = math.ceil(seconds_of_history_used)
-
+    
     # Initialize an empty list to store the indices of selected items
     selected_indices = []
 
@@ -256,7 +251,7 @@ def extract_one_instance_per_sequence(
     for index, item in enumerate(instance_token_list):
 
         if not encouteredItems.__contains__(item):
-            selected_indices.append(index+2*seconds_of_history_used-1)
+            selected_indices.append(index+int(2*seconds_of_history_used)-1)
             encouteredItems.append(item)
 
     # print(selected_indices)
@@ -281,3 +276,61 @@ def create_img_tensor(img_list: List[np.ndarray]):
     
     return image_tensor
 
+
+########################################################################################################################
+def test_utilsH_functions():
+    # Test get_instance_tokens_and_sample_tokens function
+    data_set = ["instance1_sample1", "instance2_sample2"]
+    instance_tokens, sample_tokens = get_instance_tokens_and_sample_tokens(data_set)
+    assert instance_tokens == ["instance1", "instance2"], "get_instance_tokens_and_sample_tokens failed: instance tokens do not match"
+    assert sample_tokens == ["sample1", "sample2"], "get_instance_tokens_and_sample_tokens failed: sample tokens do not match"
+
+    # Test remove_short_sequences function
+    instance_token_list = ['instance1', 'instance1', 'instance1', 'instance2', 'instance2']
+    sample_token_list = ['sample1', 'sample2', 'sample3', 'sample4', 'sample5']
+    seconds_of_history_used = 1.5
+    filtered_instance_tokens, filtered_sample_tokens = remove_short_sequences(seconds_of_history_used, instance_token_list, sample_token_list)
+    assert filtered_instance_tokens == ['instance1', 'instance1', 'instance1'], "remove_short_sequences failed: instance tokens do not match"
+    assert filtered_sample_tokens == ['sample1', 'sample2', 'sample3'], "remove_short_sequences failed: sample tokens do not match"
+
+    # Test extract_one_instance_per_sequence function
+    instance_token_list = ['instance1', 'instance1', 'instance2', 'instance2', 'instance3', 'instance3', 'instance3']
+    sample_token_list = ['sample1', 'sample2', 'sample3', 'sample4', 'sample5', 'sample6', 'sample7']
+    seconds_of_history_used = 1.0
+    extracted_instance_tokens, extracted_sample_tokens = extract_one_instance_per_sequence(seconds_of_history_used, instance_token_list, sample_token_list)
+    assert extracted_instance_tokens == ['instance1', 'instance2', 'instance3'], "extract_one_instance_per_sequence failed: instance tokens do not match"
+    assert extracted_sample_tokens == ['sample2', 'sample4', 'sample6'], "extract_one_instance_per_sequence failed: sample tokens do not match"
+
+    # # Test get_data_and_ground_truth function # TODO: funkar ej 
+    # # nuscenes = MockNuScenes() # Assuming you have a MockNuScenes class to simulate the behavior of the NuScenes class
+    # nuscenes = NuScenes('v1.0-mini', dataroot='data/sets/nuscenes')
+    # # helper = MockPredictHelper()  # Assuming you have a MockPredictHelper class to simulate the behavior of the PredictHelper class
+    # helper = PredictHelper(nuscenes)
+    # seconds_of_history_used = 1.5
+    # instance_token_list = ['instance1']
+    # sample_token_list = ['sample1']
+    # img_list, agent_state_vector_list, future_xy_local_list = get_data_and_ground_truth(nuscenes, helper, seconds_of_history_used, instance_token_list, sample_token_list)
+    # assert img_list == ['image1'], "get_data_and_ground_truth failed: img_list does not match"
+    # assert agent_state_vector_list == ['agent_state_vector1'], "get_data_and_ground_truth failed: agent_state_vector_list does not match"
+    # assert future_xy_local_list == ['future_xy_local1'], "get_data_and_ground_truth failed: future_xy_local_list does not match"
+
+    # # Test create_img_tensor function
+    # img_list = ['image1']
+    # img_tensor_list = create_img_tensor(img_list)
+    # assert img_tensor_list == ['img_tensor1'], "create_img_tensor failed: img_tensor_list does not match"
+    # Test create_img_tensor function # TODO: fixa denna?
+    mock_image = np.random.randint(0, 256, (64, 64, 3), dtype=np.uint8)  # Create a random 64x64 RGB image
+    img_list = [mock_image]
+    img_tensor_list = create_img_tensor(img_list)
+    assert len(img_tensor_list) == 1, "create_img_tensor failed: img_tensor_list length does not match"
+
+    # # Test get_and_format_data function # TODO: funkar ej 
+    # version = "v1.0-mini"
+    # DATAROOT = "data/sets/nuscenes"
+    # subset = "mini_train"
+    # seconds_of_history_used = 1.5
+    # img_list, img_tensor_list, agent_state_vector_list, future_xy_local_list = get_and_format_data(version, DATAROOT, subset, seconds_of_history_used)
+    # assert img_list == ['image1'], "get_and_format_data failed: img_list does not match"
+    # assert img_tensor_list == ['img_tensor1'], "get_and_format_data failed: img_tensor_list does not match"
+    # assert agent_state_vector_list == ['agent_state_vector1'], "get_and_format_data failed: agent_state_vector_list does not match"
+    # assert future_xy_local_list == ['future_xy_local1'], "get_and_format_data failed: future_xy_local_list does not match"

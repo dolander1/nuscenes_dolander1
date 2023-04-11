@@ -39,9 +39,6 @@ def get_and_format_data(
 
     data_set = get_prediction_challenge_split(subset, DATAROOT)
 
-    # # FOR SMALL TEST:
-    # data_set = data_set[:50]
-
     instance_token_list, sample_token_list = get_instance_tokens_and_sample_tokens(data_set)
 
     instance_token_list, sample_token_list = remove_short_sequences(seconds_of_history_used, instance_token_list, sample_token_list)
@@ -251,8 +248,8 @@ def extract_one_instance_per_sequence(
     for index, item in enumerate(instance_token_list):
 
         if not encouteredItems.__contains__(item):
-            selected_indices.append(index+int(2*seconds_of_history_used)-1)
-            encouteredItems.append(item)
+            selected_indices.append(index + int(2*seconds_of_history_used)-1)
+            encouteredItems.append(item) 
 
     # print(selected_indices)
     filtered_instance_tokens = []

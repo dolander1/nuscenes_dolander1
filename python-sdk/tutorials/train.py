@@ -36,16 +36,16 @@ class NuscenesDataset(Dataset):
 
 ################################################################################################################################################
 
-version = "v1.0-trainval" # v1.0-mini, v1.0-trainval
+version = "v1.0-mini" # v1.0-mini, v1.0-trainval
 DATAROOT = "data/sets/nuscenes"
 seconds_of_history_used = 2.0
 
 # Get training data
-train_subset = "train" # 'mini_train', 'mini_val', 'train', 'val'
+train_subset = "mini_train" # 'mini_train', 'mini_val', 'train', 'val'
 train_img_list, train_img_tensor_list, train_agent_state_vector_list, train_future_xy_local_list = utilsH.get_and_format_data(version, DATAROOT, train_subset, seconds_of_history_used)
 
 # Get validation data
-val_subset = "val" # 'mini_train', 'mini_val', 'train', 'val'.
+val_subset = "mini_val" # 'mini_train', 'mini_val', 'train', 'val'.
 val_img_list, val_img_tensor_list, val_agent_state_vector_list, val_future_xy_local_list = utilsH.get_and_format_data(version, DATAROOT, val_subset, seconds_of_history_used)
 
 ################################################################################################################################################
@@ -64,18 +64,19 @@ short_val_future_xy_local_list = val_future_xy_local_list[:val_short_size]
 # Prints
 train_num_datapoints = len(train_img_tensor_list)
 print(f"train_num_datapoints whole dataset = {train_num_datapoints}")
-train_num_datapoints = len(short_train_img_tensor_list)
+short_train_num_datapoints = len(short_train_img_tensor_list)
 print(f"train_num_datapoints short = {train_num_datapoints}")
 print(f"train_img_tensor_list size = {train_img_tensor_list[0].size()}")
 print(f"train_agent_state_vector_list[0] = {train_agent_state_vector_list[0]}")
 print(f"train_future_xy_local_list[0][0] = {train_future_xy_local_list[0][0]}\n")
 val_num_datapoints = len(val_img_tensor_list)
 print(f"val_num_datapoints whole dataset = {val_num_datapoints}")
-val_num_datapoints = len(short_val_img_tensor_list)
+short_val_num_datapoints = len(short_val_img_tensor_list)
 print(f"val_num_datapoints short = {val_num_datapoints}")
 print(f"val_img_tensor_list size = {val_img_tensor_list[0].size()}")
 print(f"val_agent_state_vector_list[0] = {val_agent_state_vector_list[0]}")
 print(f"val_future_xy_local_list[0][0] = {val_future_xy_local_list[0][0]}\n")
+
 
 
 # Variables
@@ -84,7 +85,7 @@ shuffle = True # Set to True if you want to shuffle the data in the dataloader
 num_modes = 64 # 2206, 415, 64 (match with eps_traj_set)
 eps_traj_set = 8 # 2, 4, 8 (match with num_modes)
 learning_rate = 1e-4 # From Covernet paper: fixed learning rate of 1e−4
-num_epochs = 100
+num_epochs = 200
 
 # Define datasets
 train_dataset = NuscenesDataset(train_img_tensor_list, train_agent_state_vector_list, train_future_xy_local_list)
@@ -134,10 +135,11 @@ results_string = ""
 for epoch in range(num_epochs):
     
     # TRAINING
+    covernet.train()
     train_epochLoss = 0
     train_total = 0
     train_correct = 0
-    for train_batchCount, train_batch in enumerate(train_dataloader):
+    for train_batchCount, train_batch in enumerate(train_shortDataloader):
 
         # Get train_batch data
         image_tensor, agent_state_vector, ground_truth_trajectory = train_batch
@@ -175,10 +177,11 @@ for epoch in range(num_epochs):
      
     
     # VALIDATION
+    covernet.eval()
     val_epochLoss = 0
     val_total = 0
     val_correct = 0
-    for val_batchCount, val_batch in enumerate(val_dataloader):
+    for val_batchCount, val_batch in enumerate(val_shortDataloader):
 
         # Get val_batch data
         image_tensor, agent_state_vector, ground_truth_trajectory = val_batch
@@ -213,13 +216,13 @@ for epoch in range(num_epochs):
     print(f"Epoch accu [{epoch+1}/{num_epochs}]: Training: {train_correct/train_total*100:.1f} % | Validation: {val_correct/val_total*100:.1f} %\n")
     results_string += f"Epoch [{epoch+1}/{num_epochs}]: Training loss: {train_epochLoss:.3f} | Validation loss: {val_epochLoss:.3f} || Training accuracy: {train_correct/train_total*100:.1f} % | Validation accuracy: {val_correct/val_total*100:.1f} %\n"
 
-    
+
 # Training complete
 print("Training complete!")
 
 
 # Open a file in append mode (will create a new file or append to an existing one)
-file_path = f"results_epochs={num_epochs}_eps={eps_traj_set}_batch_size={batch_size}.txt"
+file_path = f"results_epochs={num_epochs}_eps={eps_traj_set}_batch_size={batch_size}_shortTrain={short_train_num_datapoints}.txt"
 with open(file_path, "a") as file:
     file.write(results_string)  # Append the text to the file
 

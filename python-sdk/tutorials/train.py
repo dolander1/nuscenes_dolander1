@@ -60,11 +60,11 @@ for j, val_img_tensor in enumerate(val_img_tensor_list):
 ################################################################################################################################################
 
 # For testing
-train_short_size = 12800
+train_short_size = 128
 short_train_img_tensor_list = train_img_tensor_list[:train_short_size]
 short_train_agent_state_vector_list = train_agent_state_vector_list[:train_short_size]
 short_train_future_xy_local_list = train_future_xy_local_list[:train_short_size]
-val_short_size = 6400
+val_short_size = 64
 short_val_img_tensor_list = val_img_tensor_list[:val_short_size]
 short_val_agent_state_vector_list = val_agent_state_vector_list[:val_short_size]
 short_val_future_xy_local_list = val_future_xy_local_list[:val_short_size]
@@ -93,7 +93,7 @@ shuffle = True # Set to True if you want to shuffle the data in the dataloader
 num_modes = 64 # 2206, 415, 64 (match with eps_traj_set)
 eps_traj_set = 8 # 2, 4, 8 (match with num_modes)
 learning_rate = 1e-4 # From Covernet paper: fixed learning rate of 1e−4
-num_epochs = 20
+num_epochs = 500
 
 # Define datasets
 train_dataset = NuscenesDataset(train_img_tensor_list, train_agent_state_vector_list, train_future_xy_local_list)
@@ -119,7 +119,7 @@ similarity_function = mean_pointwise_l2_distance
 # Define your loss function and optimizer
 loss_function = ConstantLatticeLoss(lattice, similarity_function)
 # optimizer = optim.Adam(covernet.parameters(), lr=learning_rate) 
-optimizer = optim.SGD(covernet.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4) 
+optimizer = optim.SGD(covernet.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4) # from author https://github.com/nutonomy/nuscenes-devkit/issues/578
 
 
 # Move the model to GPU if available
@@ -129,6 +129,9 @@ covernet.to(device)
 
 # Training starts
 print("\nTraining starts:")
+
+# Open a file in append mode (will create a new file or append to an existing one)
+file_path = f"results_epochs={num_epochs}_eps={eps_traj_set}_batch_size={batch_size}_shortTrain={short_train_num_datapoints}.txt"
 results_string = ""
 
 # Training and validation loop
@@ -139,8 +142,6 @@ for epoch in range(num_epochs):
     train_epochLoss = 0
     train_total = 0
     train_correct = 0
-    # batch accumulation parameter
-    accum_iter = 4  
     for train_batchCount, train_batch in enumerate(train_shortDataloader):
 
         # Get train_batch data
@@ -158,20 +159,24 @@ for epoch in range(num_epochs):
         loss = loss_function(logits, ground_truth_trajectory)
         train_epochLoss += loss.item()
 
-        # Backward pass
-        loss.backward()
-        optimizer.step()
-        
-        # Zero the gradients
-        optimizer.zero_grad()
-        
-#         loss = loss / accum_iter
 #         # Backward pass
 #         loss.backward()
-#         # Update weights
-#         if ((train_batchCount + 1) % accum_iter == 0) or (train_batchCount + 1 == len(train_shortDataloader)):
-#             optimizer.step()
-#             optimizer.zero_grad()
+#         optimizer.step()
+        
+#         # Zero the gradients
+#         optimizer.zero_grad()
+        
+        # batch accumulation parameter
+        accum_iter = 4  
+        loss = loss / accum_iter
+        
+        # Backward pass
+        loss.backward()
+        
+        # Update weights
+        if ((train_batchCount + 1) % accum_iter == 0) or (train_batchCount + 1 == len(train_shortDataloader)):
+            optimizer.step()
+            optimizer.zero_grad()
         
         # Compute accuracy
         for logit, ground_truth in zip(logits, ground_truth_trajectory):
@@ -219,17 +224,11 @@ for epoch in range(num_epochs):
      
     # Print losses for this epoch
     thisResult = f"Epoch [{epoch+1}/{num_epochs}]: Training loss: {train_epochLoss/train_total:.3f} | Validation loss: {val_epochLoss/val_total:.3f} || Training accuracy: {train_correct/train_total*100:.1f} % | Validation accuracy: {val_correct/val_total*100:.1f} %\n"
-    results_string += thisResult
+    with open(file_path, "a") as file:
+        file.write(thisResult)  # Append the text to the file
     print(thisResult)
 
 
 # Training complete
 print("Training complete!")
 
-
-# Open a file in append mode (will create a new file or append to an existing one)
-file_path = f"results_epochs={num_epochs}_eps={eps_traj_set}_batch_size={batch_size}_shortTrain={short_train_num_datapoints}.txt"
-with open(file_path, "a") as file:
-    file.write(results_string)  # Append the text to the file
-
-print("Text appended to file successfully!")

@@ -39,18 +39,14 @@ class NuscenesDataset(Dataset):
 version = "v1.0-mini" # v1.0-mini, v1.0-trainval
 train_img_tensor_list = torch.load(f"dataLists/{version}/train_img_tensor_list.pt")
 train_agent_state_vector_list = torch.load(f"dataLists/{version}/train_agent_state_vector_list.pt")
-with open(f"dataLists/{version}/train_future_xy_local_list.npz", "rb") as f:
-    train_future_xy_local = np.load(f)
-    train_future_xy_local_list = [train_future_xy_local[key] for key in train_future_xy_local]
+train_future_xy_local_list = torch.load(f"dataLists/{version}/train_future_xy_local_list.pt")
 
 val_img_tensor_list = torch.load(f"dataLists/{version}/val_img_tensor_list.pt")
 val_agent_state_vector_list = torch.load(f"dataLists/{version}/val_agent_state_vector_list.pt")
-with open(f"dataLists/{version}/val_future_xy_local_list.npz", "rb") as f:
-    val_future_xy_local = np.load(f)
-    val_future_xy_local_list = [val_future_xy_local[key] for key in val_future_xy_local]
+val_future_xy_local_list = torch.load(f"dataLists/{version}/val_future_xy_local_list.pt")
 
     
-# ################################################################################################################################################
+################################################################################################################################################
 
 # For testing
 train_short_size = 100
@@ -65,20 +61,19 @@ short_val_future_xy_local_list = val_future_xy_local_list[:val_short_size]
 
 # Prints
 train_num_datapoints = len(train_img_tensor_list)
-print(f"train_num_datapoints whole dataset = {train_num_datapoints}")
+# print(f"train_num_datapoints whole dataset = {train_num_datapoints}")
 short_train_num_datapoints = len(short_train_img_tensor_list)
-print(f"train_num_datapoints short = {short_train_num_datapoints}")
-print(f"train_img_tensor_list size = {train_img_tensor_list[0].size()}")
-print(f"train_agent_state_vector_list[0] = {train_agent_state_vector_list[0]}")
-print(f"train_future_xy_local_list[0][0] = {train_future_xy_local_list[0][0]}\n")
+# print(f"train_num_datapoints short = {short_train_num_datapoints}")
+# print(f"train_img_tensor_list[0] = {train_img_tensor_list[0].size()}")
+# print(f"train_agent_state_vector_list[0] = {train_agent_state_vector_list[0].size()}")
+# print(f"train_future_xy_local_list[0] = {train_future_xy_local_list[0].size()}\n")
 val_num_datapoints = len(val_img_tensor_list)
-print(f"val_num_datapoints whole dataset = {val_num_datapoints}")
+# print(f"val_num_datapoints whole dataset = {val_num_datapoints}")
 short_val_num_datapoints = len(short_val_img_tensor_list)
-print(f"val_num_datapoints short = {short_val_num_datapoints}")
-print(f"val_img_tensor_list size = {val_img_tensor_list[0].size()}")
-print(f"val_agent_state_vector_list[0] = {val_agent_state_vector_list[0]}")
-print(f"val_future_xy_local_list[0][0] = {val_future_xy_local_list[0][0]}\n")
-
+# print(f"val_num_datapoints short = {short_val_num_datapoints}")
+# print(f"val_img_tensor_list[0] = {val_img_tensor_list[0].size()}")
+# print(f"val_agent_state_vector_list[0] = {val_agent_state_vector_list[0].size()}")
+# print(f"val_future_xy_local_list[0] = {val_future_xy_local_list[0].size()}\n")
 
 
 # Variables
@@ -175,7 +170,7 @@ for epoch in range(num_epochs):
             train_correct += (predicted == closest_lattice_trajectory).sum().item()
 
         # Print loss for this train_batch
-        # print(f"train_batch [{train_batchCount+1}/{int(train_num_datapoints/batch_size)+1}], Batch Loss: {loss.item():.4f}")
+        # print(f"train_batch [{train_batchCount+1}/{int(short_train_num_datapoints/batch_size)+1}], Batch Loss: {loss.item():.4f}")
      
     
     # VALIDATION
@@ -212,7 +207,7 @@ for epoch in range(num_epochs):
                 val_correct += (predicted == closest_lattice_trajectory).sum().item()
 
             # Print loss for this val_batch
-            # print(f"val_batch [{val_batchCount+1}/{int(val_num_datapoints/batch_size)+1}], Batch Loss: {loss.item():.4f}")
+            # print(f"val_batch [{val_batchCount+1}/{int(short_val_num_datapoints/batch_size)+1}], Batch Loss: {loss.item():.4f}")
      
     # Print losses for this epoch
     print(f"Epoch loss [{epoch+1}/{num_epochs}]: Training: {train_epochLoss:.3f} | Validation: {val_epochLoss:.3f}")

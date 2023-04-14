@@ -9,6 +9,8 @@ version = "v1.0-mini" # v1.0-mini, v1.0-trainval
 DATAROOT = "data/sets/nuscenes"
 seconds_of_history_used = 2.0
 
+
+
 # Get training data
 train_subset = "mini_train" # 'mini_train', 'mini_val', 'train', 'val'
 train_img_list, train_img_tensor_list, train_agent_state_vector_list, train_future_xy_local_list = utilsH.get_and_format_data(version, DATAROOT, train_subset, seconds_of_history_used)
@@ -16,15 +18,13 @@ train_img_list, train_img_tensor_list, train_agent_state_vector_list, train_futu
 # Save training data
 torch.save(train_img_tensor_list, f"dataLists/{version}/train_img_tensor_list.pt")
 torch.save(train_agent_state_vector_list, f"dataLists/{version}/train_agent_state_vector_list.pt")
-with open(f"dataLists/{version}/train_future_xy_local_list.npz", "wb") as f:
-    np.savez(f, *train_future_xy_local_list)
-    
+torch_train_future_xy_local_list = [torch.Tensor(train_future_xy_local) for train_future_xy_local in train_future_xy_local_list]
+torch.save(torch_train_future_xy_local_list, f"dataLists/{version}/train_future_xy_local_list.pt")
+
 # Load training data
 loaded_train_img_tensor_list = torch.load(f"dataLists/{version}/train_img_tensor_list.pt")
 loaded_train_agent_state_vector_list = torch.load(f"dataLists/{version}/train_agent_state_vector_list.pt")
-with open(f"dataLists/{version}/train_future_xy_local_list.npz", "rb") as f:
-    loaded_train_future_xy_local = np.load(f)
-    loaded_train_future_xy_local_list = [loaded_train_future_xy_local[key] for key in loaded_train_future_xy_local]
+loaded_train_future_xy_local_list = torch.load(f"dataLists/{version}/train_future_xy_local_list.pt")
 
 
 # Get validation data
@@ -34,15 +34,13 @@ val_img_list, val_img_tensor_list, val_agent_state_vector_list, val_future_xy_lo
 # Save validation data
 torch.save(val_img_tensor_list, f"dataLists/{version}/val_img_tensor_list.pt")
 torch.save(val_agent_state_vector_list, f"dataLists/{version}/val_agent_state_vector_list.pt")
-with open(f"dataLists/{version}/val_future_xy_local_list.npz", "wb") as f:
-    np.savez(f, *val_future_xy_local_list)
-    
+torch_val_future_xy_local_list = [torch.Tensor(val_future_xy_local) for val_future_xy_local in val_future_xy_local_list]
+torch.save(torch_val_future_xy_local_list, f"dataLists/{version}/val_future_xy_local_list.pt")
+
 # Load validation data
 loaded_val_img_tensor_list = torch.load(f"dataLists/{version}/val_img_tensor_list.pt")
 loaded_val_agent_state_vector_list = torch.load(f"dataLists/{version}/val_agent_state_vector_list.pt")
-with open(f"dataLists/{version}/val_future_xy_local_list.npz", "rb") as f:
-    loaded_val_future_xy_local = np.load(f)
-    loaded_val_future_xy_local_list = [loaded_val_future_xy_local[key] for key in loaded_val_future_xy_local]
+loaded_val_future_xy_local_list = torch.load(f"dataLists/{version}/val_future_xy_local_list.pt")
 
     
 # Function to check if two lists of tensors are identical
@@ -64,14 +62,16 @@ def are_tensor_lists_identical(list1, list2, type):
 # Check if the two lists of tensors are identical
 identical1 = are_tensor_lists_identical(train_img_tensor_list, loaded_train_img_tensor_list, "tensor")
 identical2 = are_tensor_lists_identical(train_agent_state_vector_list, loaded_train_agent_state_vector_list, "tensor")
-identical3 = are_tensor_lists_identical(train_future_xy_local_list, loaded_train_future_xy_local_list, "array")
+identical3 = are_tensor_lists_identical(torch_train_future_xy_local_list, loaded_train_future_xy_local_list, "tensor")
 identical4 = are_tensor_lists_identical(val_img_tensor_list, loaded_val_img_tensor_list, "tensor")
 identical5 = are_tensor_lists_identical(val_agent_state_vector_list, loaded_val_agent_state_vector_list, "tensor")
-identical6 = are_tensor_lists_identical(val_future_xy_local_list, loaded_val_future_xy_local_list, "array")
+identical6 = are_tensor_lists_identical(torch_val_future_xy_local_list, loaded_val_future_xy_local_list, "tensor")
+
 print("Are the two lists of tensors identical?", identical1)
 print("Are the two lists of tensors identical?", identical2)
 print("Are the two lists of tensors identical?", identical3)
 print("Are the two lists of tensors identical?", identical4)
 print("Are the two lists of tensors identical?", identical5)
 print("Are the two lists of tensors identical?", identical6)
+
 

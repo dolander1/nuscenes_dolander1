@@ -10,10 +10,10 @@ import numpy as np
 
 from nuscenes.prediction.models.backbone import ResNetBackbone
 
-import utilsHannes as utilsH
 from utilsHannes import CoverNetNoRelu
 from utilsHannes import ConstantLatticeLoss
 from utilsHannes import mean_pointwise_l2_distance
+import utilsHannes as utilsH
 importlib.reload(utilsH)
 
 #################################################################################################################################
@@ -35,20 +35,22 @@ class NuscenesDataset(Dataset):
         return image_data_item, agent_state_data_item, ground_truth_data_item
 
 ################################################################################################################################################
-
+# Load data
 version = "v1.0-mini" # v1.0-mini, v1.0-trainval
-DATAROOT = "data/sets/nuscenes"
-seconds_of_history_used = 2.0
+train_img_tensor_list = torch.load(f"dataLists/{version}/train_img_tensor_list.pt")
+train_agent_state_vector_list = torch.load(f"dataLists/{version}/train_agent_state_vector_list.pt")
+with open(f"dataLists/{version}/train_future_xy_local_list.npz", "rb") as f:
+    train_future_xy_local = np.load(f)
+    train_future_xy_local_list = [train_future_xy_local[key] for key in train_future_xy_local]
 
-# Get training data
-train_subset = "mini_train" # 'mini_train', 'mini_val', 'train', 'val'
-train_img_list, train_img_tensor_list, train_agent_state_vector_list, train_future_xy_local_list = utilsH.get_and_format_data(version, DATAROOT, train_subset, seconds_of_history_used)
+val_img_tensor_list = torch.load(f"dataLists/{version}/val_img_tensor_list.pt")
+val_agent_state_vector_list = torch.load(f"dataLists/{version}/val_agent_state_vector_list.pt")
+with open(f"dataLists/{version}/val_future_xy_local_list.npz", "rb") as f:
+    val_future_xy_local = np.load(f)
+    val_future_xy_local_list = [val_future_xy_local[key] for key in val_future_xy_local]
 
-# Get validation data
-val_subset = "mini_val" # 'mini_train', 'mini_val', 'train', 'val'.
-val_img_list, val_img_tensor_list, val_agent_state_vector_list, val_future_xy_local_list = utilsH.get_and_format_data(version, DATAROOT, val_subset, seconds_of_history_used)
-
-################################################################################################################################################
+    
+# ################################################################################################################################################
 
 # For testing
 train_short_size = 100
@@ -65,14 +67,14 @@ short_val_future_xy_local_list = val_future_xy_local_list[:val_short_size]
 train_num_datapoints = len(train_img_tensor_list)
 print(f"train_num_datapoints whole dataset = {train_num_datapoints}")
 short_train_num_datapoints = len(short_train_img_tensor_list)
-print(f"train_num_datapoints short = {train_num_datapoints}")
+print(f"train_num_datapoints short = {short_train_num_datapoints}")
 print(f"train_img_tensor_list size = {train_img_tensor_list[0].size()}")
 print(f"train_agent_state_vector_list[0] = {train_agent_state_vector_list[0]}")
 print(f"train_future_xy_local_list[0][0] = {train_future_xy_local_list[0][0]}\n")
 val_num_datapoints = len(val_img_tensor_list)
 print(f"val_num_datapoints whole dataset = {val_num_datapoints}")
 short_val_num_datapoints = len(short_val_img_tensor_list)
-print(f"val_num_datapoints short = {val_num_datapoints}")
+print(f"val_num_datapoints short = {short_val_num_datapoints}")
 print(f"val_img_tensor_list size = {val_img_tensor_list[0].size()}")
 print(f"val_agent_state_vector_list[0] = {val_agent_state_vector_list[0]}")
 print(f"val_future_xy_local_list[0][0] = {val_future_xy_local_list[0][0]}\n")
@@ -181,35 +183,36 @@ for epoch in range(num_epochs):
     val_epochLoss = 0
     val_total = 0
     val_correct = 0
-    for val_batchCount, val_batch in enumerate(val_shortDataloader):
+    with torch.no_grad():
+        for val_batchCount, val_batch in enumerate(val_shortDataloader):
 
-        # Get val_batch data
-        image_tensor, agent_state_vector, ground_truth_trajectory = val_batch
-        image_tensor = torch.squeeze(image_tensor, dim=1)
-        agent_state_vector = torch.squeeze(agent_state_vector, dim=1)
-        
+            # Get val_batch data
+            image_tensor, agent_state_vector, ground_truth_trajectory = val_batch
+            image_tensor = torch.squeeze(image_tensor, dim=1)
+            agent_state_vector = torch.squeeze(agent_state_vector, dim=1)
 
-        # Send to device
-        image_tensor = image_tensor.to(device)
-        agent_state_vector = agent_state_vector.to(device)
-        ground_truth_trajectory = ground_truth_trajectory.to(device)
-        
-        # Forward pass
-        logits = covernet(image_tensor, agent_state_vector)
-        
-        # Compute loss
-        loss = loss_function(logits, ground_truth_trajectory)
-        val_epochLoss += loss.item()
-        
-        # Compute accuracy
-        for logit, ground_truth in zip(logits, ground_truth_trajectory):
-            _, predicted = torch.max(logit, 0)
-            closest_lattice_trajectory = similarity_function(torch.Tensor(lattice).to(device), ground_truth)
-            val_total += 1
-            val_correct += (predicted == closest_lattice_trajectory).sum().item()
 
-        # Print loss for this val_batch
-        # print(f"val_batch [{val_batchCount+1}/{int(val_num_datapoints/batch_size)+1}], Batch Loss: {loss.item():.4f}")
+            # Send to device
+            image_tensor = image_tensor.to(device)
+            agent_state_vector = agent_state_vector.to(device)
+            ground_truth_trajectory = ground_truth_trajectory.to(device)
+
+            # Forward pass
+            logits = covernet(image_tensor, agent_state_vector)
+
+            # Compute loss
+            loss = loss_function(logits, ground_truth_trajectory)
+            val_epochLoss += loss.item()
+
+            # Compute accuracy
+            for logit, ground_truth in zip(logits, ground_truth_trajectory):
+                _, predicted = torch.max(logit, 0)
+                closest_lattice_trajectory = similarity_function(torch.Tensor(lattice).to(device), ground_truth)
+                val_total += 1
+                val_correct += (predicted == closest_lattice_trajectory).sum().item()
+
+            # Print loss for this val_batch
+            # print(f"val_batch [{val_batchCount+1}/{int(val_num_datapoints/batch_size)+1}], Batch Loss: {loss.item():.4f}")
      
     # Print losses for this epoch
     print(f"Epoch loss [{epoch+1}/{num_epochs}]: Training: {train_epochLoss:.3f} | Validation: {val_epochLoss:.3f}")

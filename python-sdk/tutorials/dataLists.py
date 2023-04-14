@@ -6,7 +6,7 @@ importlib.reload(utilsH)
 
 
 
-version = "v1.0-mini" # v1.0-mini, v1.0-trainval
+version = "v1.0-trainval" # v1.0-mini, v1.0-trainval
 if version == "v1.0-mini":
     train_subset = "mini_train"
     val_subset = "mini_val"

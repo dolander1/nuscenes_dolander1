@@ -36,7 +36,7 @@ class NuscenesDataset(Dataset):
 
 ################################################################################################################################################
 # Load data
-version = "v1.0-mini" # v1.0-mini, v1.0-trainval
+version = "v1.0-trainval" # v1.0-mini, v1.0-trainval
 seconds_of_history_used = 2.0 # 2.0
 
 train_img_tensor_list = torch.load(f"dataLists/{version}/{seconds_of_history_used}/train_img_tensor_list.pt")
@@ -47,15 +47,24 @@ val_img_tensor_list = torch.load(f"dataLists/{version}/{seconds_of_history_used}
 val_agent_state_vector_list = torch.load(f"dataLists/{version}/{seconds_of_history_used}/val_agent_state_vector_list.pt")
 val_future_xy_local_list = torch.load(f"dataLists/{version}/{seconds_of_history_used}/val_future_xy_local_list.pt")
 
+# Squeeze for correct dimensions
+for i, train_img_tensor in enumerate(train_img_tensor_list):
+    train_img_tensor_list[i] = torch.squeeze(train_img_tensor, dim=0)
+    train_agent_state_vector_list[i] = torch.squeeze(train_agent_state_vector_list[i], dim=0)
+    
+for j, val_img_tensor in enumerate(val_img_tensor_list):
+    val_img_tensor_list[j] = torch.squeeze(val_img_tensor, dim=0)
+    val_agent_state_vector_list[j] = torch.squeeze(val_agent_state_vector_list[j], dim=0)
+
     
 ################################################################################################################################################
 
 # For testing
-train_short_size = 100
+train_short_size = 12800
 short_train_img_tensor_list = train_img_tensor_list[:train_short_size]
 short_train_agent_state_vector_list = train_agent_state_vector_list[:train_short_size]
 short_train_future_xy_local_list = train_future_xy_local_list[:train_short_size]
-val_short_size = 25
+val_short_size = 6400
 short_val_img_tensor_list = val_img_tensor_list[:val_short_size]
 short_val_agent_state_vector_list = val_agent_state_vector_list[:val_short_size]
 short_val_future_xy_local_list = val_future_xy_local_list[:val_short_size]
@@ -79,12 +88,12 @@ short_val_num_datapoints = len(short_val_img_tensor_list)
 
 
 # Variables
-batch_size = 10
+batch_size = 16
 shuffle = True # Set to True if you want to shuffle the data in the dataloader
 num_modes = 64 # 2206, 415, 64 (match with eps_traj_set)
 eps_traj_set = 8 # 2, 4, 8 (match with num_modes)
 learning_rate = 1e-4 # From Covernet paper: fixed learning rate of 1e−4
-num_epochs = 200
+num_epochs = 20
 
 # Define datasets
 train_dataset = NuscenesDataset(train_img_tensor_list, train_agent_state_vector_list, train_future_xy_local_list)
@@ -109,25 +118,17 @@ similarity_function = mean_pointwise_l2_distance
 
 # Define your loss function and optimizer
 loss_function = ConstantLatticeLoss(lattice, similarity_function)
-optimizer = optim.Adam(covernet.parameters(), lr=learning_rate) 
+# optimizer = optim.Adam(covernet.parameters(), lr=learning_rate) 
+optimizer = optim.SGD(covernet.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4) 
+
 
 # Move the model to GPU if available
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 covernet.to(device)
 
 
-# # Squeeze for correct dimensions
-# for i, train_img_tensor in enumerate(train_img_tensor_list):
-#     train_img_tensor_list[i] = torch.squeeze(train_img_tensor, dim=0)
-#     train_agent_state_vector_list[i] = torch.squeeze(train_agent_state_vector_list[i], dim=0)
-    
-# for j, val_img_tensor in enumerate(val_img_tensor_list):
-#     val_img_tensor_list[j] = torch.squeeze(val_img_tensor, dim=0)
-#     val_agent_state_vector_list[j] = torch.squeeze(val_agent_state_vector_list[j], dim=0)
-
-
 # Training starts
-print("Training starts:")
+print("\nTraining starts:")
 results_string = ""
 
 # Training and validation loop
@@ -138,21 +139,18 @@ for epoch in range(num_epochs):
     train_epochLoss = 0
     train_total = 0
     train_correct = 0
+    # batch accumulation parameter
+    accum_iter = 4  
     for train_batchCount, train_batch in enumerate(train_shortDataloader):
 
         # Get train_batch data
         image_tensor, agent_state_vector, ground_truth_trajectory = train_batch
-        image_tensor = torch.squeeze(image_tensor, dim=1)
-        agent_state_vector = torch.squeeze(agent_state_vector, dim=1)
-        
+
         # Send to device
         image_tensor = image_tensor.to(device)
         agent_state_vector = agent_state_vector.to(device)
         ground_truth_trajectory = ground_truth_trajectory.to(device)
-
-        # Zero the gradients
-        optimizer.zero_grad()
-
+        
         # Forward pass
         logits = covernet(image_tensor, agent_state_vector)
 
@@ -164,7 +162,18 @@ for epoch in range(num_epochs):
         loss.backward()
         optimizer.step()
         
-       # Compute accuracy
+        # Zero the gradients
+        optimizer.zero_grad()
+        
+#         loss = loss / accum_iter
+#         # Backward pass
+#         loss.backward()
+#         # Update weights
+#         if ((train_batchCount + 1) % accum_iter == 0) or (train_batchCount + 1 == len(train_shortDataloader)):
+#             optimizer.step()
+#             optimizer.zero_grad()
+        
+        # Compute accuracy
         for logit, ground_truth in zip(logits, ground_truth_trajectory):
             _, predicted = torch.max(logit, 0)
             closest_lattice_trajectory = similarity_function(torch.Tensor(lattice).to(device), ground_truth)
@@ -185,9 +194,6 @@ for epoch in range(num_epochs):
 
             # Get val_batch data
             image_tensor, agent_state_vector, ground_truth_trajectory = val_batch
-            image_tensor = torch.squeeze(image_tensor, dim=1)
-            agent_state_vector = torch.squeeze(agent_state_vector, dim=1)
-
 
             # Send to device
             image_tensor = image_tensor.to(device)
@@ -212,9 +218,9 @@ for epoch in range(num_epochs):
             # print(f"val_batch [{val_batchCount+1}/{int(short_val_num_datapoints/batch_size)+1}], Batch Loss: {loss.item():.4f}")
      
     # Print losses for this epoch
-    print(f"Epoch loss [{epoch+1}/{num_epochs}]: Training: {train_epochLoss:.3f} | Validation: {val_epochLoss:.3f}")
-    print(f"Epoch accu [{epoch+1}/{num_epochs}]: Training: {train_correct/train_total*100:.1f} % | Validation: {val_correct/val_total*100:.1f} %\n")
-    results_string += f"Epoch [{epoch+1}/{num_epochs}]: Training loss: {train_epochLoss:.3f} | Validation loss: {val_epochLoss:.3f} || Training accuracy: {train_correct/train_total*100:.1f} % | Validation accuracy: {val_correct/val_total*100:.1f} %\n"
+    thisResult = f"Epoch [{epoch+1}/{num_epochs}]: Training loss: {train_epochLoss/train_total:.3f} | Validation loss: {val_epochLoss/val_total:.3f} || Training accuracy: {train_correct/train_total*100:.1f} % | Validation accuracy: {val_correct/val_total*100:.1f} %\n"
+    results_string += thisResult
+    print(thisResult)
 
 
 # Training complete

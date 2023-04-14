@@ -37,13 +37,15 @@ class NuscenesDataset(Dataset):
 ################################################################################################################################################
 # Load data
 version = "v1.0-mini" # v1.0-mini, v1.0-trainval
-train_img_tensor_list = torch.load(f"dataLists/{version}/train_img_tensor_list.pt")
-train_agent_state_vector_list = torch.load(f"dataLists/{version}/train_agent_state_vector_list.pt")
-train_future_xy_local_list = torch.load(f"dataLists/{version}/train_future_xy_local_list.pt")
+seconds_of_history_used = 2.0 # 2.0
 
-val_img_tensor_list = torch.load(f"dataLists/{version}/val_img_tensor_list.pt")
-val_agent_state_vector_list = torch.load(f"dataLists/{version}/val_agent_state_vector_list.pt")
-val_future_xy_local_list = torch.load(f"dataLists/{version}/val_future_xy_local_list.pt")
+train_img_tensor_list = torch.load(f"dataLists/{version}/{seconds_of_history_used}/train_img_tensor_list.pt")
+train_agent_state_vector_list = torch.load(f"dataLists/{version}/{seconds_of_history_used}/train_agent_state_vector_list.pt")
+train_future_xy_local_list = torch.load(f"dataLists/{version}/{seconds_of_history_used}/train_future_xy_local_list.pt")
+
+val_img_tensor_list = torch.load(f"dataLists/{version}/{seconds_of_history_used}/val_img_tensor_list.pt")
+val_agent_state_vector_list = torch.load(f"dataLists/{version}/{seconds_of_history_used}/val_agent_state_vector_list.pt")
+val_future_xy_local_list = torch.load(f"dataLists/{version}/{seconds_of_history_used}/val_future_xy_local_list.pt")
 
     
 ################################################################################################################################################

@@ -39,13 +39,13 @@ class NuscenesDataset(Dataset):
 version = "v1.0-trainval" # v1.0-mini, v1.0-trainval
 seconds_of_history_used = 2.0 # 2.0
 
-train_img_tensor_list = torch.load(f"dataLists/{version}/{seconds_of_history_used}/train_img_tensor_list.pt")
-train_agent_state_vector_list = torch.load(f"dataLists/{version}/{seconds_of_history_used}/train_agent_state_vector_list.pt")
-train_future_xy_local_list = torch.load(f"dataLists/{version}/{seconds_of_history_used}/train_future_xy_local_list.pt")
+train_img_tensor_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/train_img_tensor_list.pt")
+train_agent_state_vector_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/train_agent_state_vector_list.pt")
+train_future_xy_local_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/train_future_xy_local_list.pt")
 
-val_img_tensor_list = torch.load(f"dataLists/{version}/{seconds_of_history_used}/val_img_tensor_list.pt")
-val_agent_state_vector_list = torch.load(f"dataLists/{version}/{seconds_of_history_used}/val_agent_state_vector_list.pt")
-val_future_xy_local_list = torch.load(f"dataLists/{version}/{seconds_of_history_used}/val_future_xy_local_list.pt")
+val_img_tensor_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/val_img_tensor_list.pt")
+val_agent_state_vector_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/val_agent_state_vector_list.pt")
+val_future_xy_local_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/val_future_xy_local_list.pt")
 
 # Squeeze for correct dimensions
 for i, train_img_tensor in enumerate(train_img_tensor_list):

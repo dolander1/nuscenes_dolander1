@@ -132,10 +132,10 @@ covernet.to(device)
 print("\nTraining starts:")
 
 # batch accumulation parameter
-accum_iter = 4 
+accum_iter = 1
 
 # Open a file in append mode (will create a new file or append to an existing one)
-file_path = f"results_epochs={num_epochs}_eps={eps_traj_set}_batch_size={batch_size*accum_iter}_lr={learning_rate}_shuffle={shuffle}.txt"
+file_path = f"tmpResults/results_epochs={num_epochs}_eps={eps_traj_set}_batch_size={batch_size*accum_iter}_lr={learning_rate}_shuffle={shuffle}.txt"
 results_string = ""
 
 # Training and validation loop

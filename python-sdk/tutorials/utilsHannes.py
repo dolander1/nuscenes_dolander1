@@ -46,6 +46,8 @@ def get_and_format_data(
     # Choose all or one sequence per instance
     if sequences_per_instance == "one_sequences_per_instance":
         instance_token_list, sample_token_list = extract_one_instance_per_sequence(seconds_of_history_used, instance_token_list, sample_token_list)
+    elif sequences_per_instance == "non_overlapping_sequences_per_instance":
+        instance_token_list, sample_token_list = extract_non_overlapping_instances_per_sequence(seconds_of_history_used, instance_token_list, sample_token_list)
     elif sequences_per_instance == "all_sequences_per_instance":
         instance_token_list, sample_token_list = extract_all_instances_per_sequence(seconds_of_history_used, instance_token_list, sample_token_list)
     
@@ -267,6 +269,66 @@ def extract_all_instances_per_sequence(
             if instance_counts[item] > (int(2*seconds_of_history_used) - 1):
                 selected_indices.append(index + int(2*seconds_of_history_used)-1)
                 tmp_instance_token_list.remove(item)
+            else:
+                encouteredItems.append(item) 
+            
+
+    filtered_instance_tokens = []
+    filtered_sample_tokens = []
+    [filtered_instance_tokens.append(instance_token_list[index]) for index in selected_indices]
+    [filtered_sample_tokens.append(sample_token_list[index]) for index in selected_indices]
+    
+    unique_instance_tokens = len((filtered_instance_tokens)) #Daniel
+    unique_sample_tokens = len((filtered_sample_tokens)) #Daniel
+    print(f"""After extract_all_instances_per_sequence:
+        unique_instance_tokens = {unique_instance_tokens}
+        unique_sample_tokens = {unique_sample_tokens}""") #Daniel
+
+    return filtered_instance_tokens, filtered_sample_tokens
+
+def extract_non_overlapping_instances_per_sequence(
+        seconds_of_history_used: float,
+        instance_token_list: List[str],
+        sample_token_list: List[str]
+) -> Tuple[List[str], List[str]]:
+    """Function for extracting one instance per sequence.
+    It should select the frame with the 
+
+    Parameters
+    ----------
+    seconds_of_history_used: float,
+        Seconds of privious agent positions (2 per second) in images 
+    instance_token_list: List[str],
+        The list of instance tokens.
+    sample_token_list: List[str]
+        The list of sample tokens.
+
+    Returns
+    -------
+    token_lists
+        token_lists for instances and samples containing one sample per sequence.
+    """
+    
+    # Initialize an empty list to store the indices of selected items
+    selected_indices = []
+
+    # Initialize an empty list to store the indices of encoutered items
+    encouteredItems = []
+    
+    # Instance token list to manipulate
+    tmp_instance_token_list = instance_token_list.copy()
+        
+    # Iterate over the list and save the fouth index of each item
+    for index, item in enumerate(instance_token_list):
+
+        # Count the occurrences of each instance in the list
+        instance_counts = Counter(tmp_instance_token_list)
+        
+        if not encouteredItems.__contains__(item):
+            if instance_counts[item] > (int(2*seconds_of_history_used)-1):
+                selected_indices.append(index + int(2*seconds_of_history_used)-1)
+                for _ in range(int(2*seconds_of_history_used)):
+                    tmp_instance_token_list.remove(item)
             else:
                 encouteredItems.append(item) 
             

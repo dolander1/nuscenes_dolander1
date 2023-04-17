@@ -6,7 +6,7 @@ importlib.reload(utilsH)
 
 
 
-version = "v1.0-mini" # v1.0-mini, v1.0-trainval
+version = "v1.0-trainval" # v1.0-mini, v1.0-trainval
 if version == "v1.0-mini":
     train_subset = "mini_train"
     val_subset = "mini_val"
@@ -14,7 +14,7 @@ elif version == "v1.0-trainval":
     train_subset = "train"
     val_subset = "val"
     
-sequences_per_instance = "one_sequences_per_instance" # one_sequences_per_instance, all_sequences_per_instance
+sequences_per_instance = "non_overlapping_sequences_per_instance" # one_sequences_per_instance, non_overlapping_sequences_per_instance, all_sequences_per_instance
     
 DATAROOT = "data/sets/nuscenes"
 seconds_of_history_used = 2.0 # Half second steps

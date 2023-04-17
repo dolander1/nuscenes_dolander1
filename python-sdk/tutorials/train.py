@@ -38,7 +38,7 @@ class NuscenesDataset(Dataset):
 # Load data
 version = "v1.0-mini" # v1.0-mini, v1.0-trainval
 seconds_of_history_used = 2.0 # 2.0
-sequences_per_instance = "one_sequences_per_instance" # one_sequences_per_instance, all_sequences_per_instance
+sequences_per_instance = "one_sequences_per_instance" # one_sequences_per_instance, non_overlapping_sequences_per_instance, all_sequences_per_instance, 
 
 train_img_tensor_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/train_img_tensor_list.pt")
 train_agent_state_vector_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/train_agent_state_vector_list.pt")

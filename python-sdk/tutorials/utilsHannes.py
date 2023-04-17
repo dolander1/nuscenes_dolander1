@@ -30,7 +30,8 @@ def get_and_format_data(
         version: str = 'v1.0-mini',
         DATAROOT: str = 'data/sets/nuscenes',
         subset: str = 'mini_train',
-        seconds_of_history_used: float = 2.0
+        seconds_of_history_used: float = 2.0,
+        sequences_per_instance: str = 'one_sequences_per_instance'
 ) -> Tuple[List[np.ndarray], List[np.ndarray], List[Tuple[np.ndarray, np.ndarray]]]:
     
     nuscenes = NuScenes(version, dataroot=DATAROOT)
@@ -42,8 +43,12 @@ def get_and_format_data(
 
     instance_token_list, sample_token_list = remove_short_sequences(seconds_of_history_used, instance_token_list, sample_token_list)
 
-    instance_token_list, sample_token_list = extract_one_instance_per_sequence(seconds_of_history_used, instance_token_list, sample_token_list)
-
+    # Choose all or one sequence per instance
+    if sequences_per_instance == "one_sequences_per_instance":
+        instance_token_list, sample_token_list = extract_one_instance_per_sequence(seconds_of_history_used, instance_token_list, sample_token_list)
+    elif sequences_per_instance == "all_sequences_per_instance":
+        instance_token_list, sample_token_list = extract_all_instances_per_sequence(seconds_of_history_used, instance_token_list, sample_token_list)
+    
     img_list, agent_state_vector_list, future_xy_local_list = get_data_and_ground_truth(nuscenes, helper, seconds_of_history_used, instance_token_list, sample_token_list)
 
     img_tensor = create_img_tensor(img_list)
@@ -186,30 +191,94 @@ def remove_short_sequences(
     token_lists
         updated (shortened) token_lists for instances and samples.
     """
+    unique_instance_tokens = len(set(instance_token_list)) #Daniel
+    unique_sample_tokens = len(set(sample_token_list)) #Daniel
+    print(f"""Before remove_short_sequences:
+        unique_instance_tokens = {unique_instance_tokens}
+        unique_sample_tokens = {unique_sample_tokens}""") #Daniel
     
+     # Initialize an empty list to store the indices of items with a count greater than 2*seconds_of_history_used - 1
+    selected_indices = []
+
     # Count the occurrences of each string in the list
     string_counts = Counter(instance_token_list)
-
-    # Initialize an empty list to store the indices of items with a count greater than 2*seconds_of_history_used - 1
-    selected_indices = []
 
     # Iterate over the list and save the index if the count of the item is greater than 2*seconds_of_history_used - 1
     for index, item in enumerate(instance_token_list):
         if string_counts[item] > (int(2*seconds_of_history_used) - 1): # One history is always avalible 
             selected_indices.append(index)
 
-    # print(selected_indices)
     filtered_instance_tokens = []
     filtered_sample_tokens = []
     [filtered_instance_tokens.append(instance_token_list[index]) for index in selected_indices]
     [filtered_sample_tokens.append(sample_token_list[index]) for index in selected_indices]
     
-    # unique_instance_tokens = len(set(filtered_instance_tokens)) #Daniel
-    # unique_sample_tokens = len(set(filtered_sample_tokens)) #Daniel
-    # print(f"""After remove_short_sequences:
-    #     unique_instance_tokens = {unique_instance_tokens}
-    #     unique_sample_tokens = {unique_sample_tokens}""") #Daniel
+    unique_instance_tokens = len(set(filtered_instance_tokens)) #Daniel
+    unique_sample_tokens = len(set(filtered_sample_tokens)) #Daniel
+    print(f"""After remove_short_sequences:
+        unique_instance_tokens = {unique_instance_tokens}
+        unique_sample_tokens = {unique_sample_tokens}""") #Daniel
     
+
+    return filtered_instance_tokens, filtered_sample_tokens
+
+
+def extract_all_instances_per_sequence(
+        seconds_of_history_used: float,
+        instance_token_list: List[str],
+        sample_token_list: List[str]
+) -> Tuple[List[str], List[str]]:
+    """Function for extracting one instance per sequence.
+    It should select the frame with the 
+
+    Parameters
+    ----------
+    seconds_of_history_used: float,
+        Seconds of privious agent positions (2 per second) in images 
+    instance_token_list: List[str],
+        The list of instance tokens.
+    sample_token_list: List[str]
+        The list of sample tokens.
+
+    Returns
+    -------
+    token_lists
+        token_lists for instances and samples containing one sample per sequence.
+    """
+    
+    # Initialize an empty list to store the indices of selected items
+    selected_indices = []
+
+    # Initialize an empty list to store the indices of encoutered items
+    encouteredItems = []
+    
+    # Instance token list to manipulate
+    tmp_instance_token_list = instance_token_list.copy()
+        
+    # Iterate over the list and save the fouth index of each item
+    for index, item in enumerate(instance_token_list):
+
+        # Count the occurrences of each instance in the list
+        instance_counts = Counter(tmp_instance_token_list)
+        
+        if not encouteredItems.__contains__(item):
+            if instance_counts[item] > (int(2*seconds_of_history_used) - 1):
+                selected_indices.append(index + int(2*seconds_of_history_used)-1)
+                tmp_instance_token_list.remove(item)
+            else:
+                encouteredItems.append(item) 
+            
+
+    filtered_instance_tokens = []
+    filtered_sample_tokens = []
+    [filtered_instance_tokens.append(instance_token_list[index]) for index in selected_indices]
+    [filtered_sample_tokens.append(sample_token_list[index]) for index in selected_indices]
+    
+    unique_instance_tokens = len(set(filtered_instance_tokens)) #Daniel
+    unique_sample_tokens = len(set(filtered_sample_tokens)) #Daniel
+    print(f"""After extract_all_instances_per_sequence:
+        unique_instance_tokens = {unique_instance_tokens}
+        unique_sample_tokens = {unique_sample_tokens}""") #Daniel
 
     return filtered_instance_tokens, filtered_sample_tokens
 
@@ -250,17 +319,17 @@ def extract_one_instance_per_sequence(
             selected_indices.append(index + int(2*seconds_of_history_used)-1)
             encouteredItems.append(item) 
 
-    # print(selected_indices)
+            
     filtered_instance_tokens = []
     filtered_sample_tokens = []
     [filtered_instance_tokens.append(instance_token_list[index]) for index in selected_indices]
     [filtered_sample_tokens.append(sample_token_list[index]) for index in selected_indices]
     
-    # unique_instance_tokens = len(set(filtered_instance_tokens)) #Daniel
-    # unique_sample_tokens = len(set(filtered_sample_tokens)) #Daniel
-    # print(f"""After extract_one_instance_per_sequence:
-    #     unique_instance_tokens = {unique_instance_tokens}
-    #     unique_sample_tokens = {unique_sample_tokens}""") #Daniel
+    unique_instance_tokens = len(set(filtered_instance_tokens)) #Daniel
+    unique_sample_tokens = len(set(filtered_sample_tokens)) #Daniel
+    print(f"""After extract_one_instance_per_sequence:
+        unique_instance_tokens = {unique_instance_tokens}
+        unique_sample_tokens = {unique_sample_tokens}""") #Daniel
 
     return filtered_instance_tokens, filtered_sample_tokens
 

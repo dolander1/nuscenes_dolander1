@@ -1,0 +1,2 @@
+Epoch [1/5000]: Training loss: 493.368 | Validation loss: 121.653 || Training accuracy: 10.9 % | Validation accuracy: 15.6 %
+Epoch [2/5000]: Training loss: 443.663 | Validation loss: 118.889 || Training accuracy: 15.1 % | Validation accuracy: 15.4 %

@@ -84,8 +84,8 @@ def get_instance_tokens_and_sample_tokens(
     # print(data_set)
     # print(instance_token_list)
     # print(sample_token_list)
-    # unique_instance_tokens = len(set(instance_token_list)) #Daniel
-    # unique_sample_tokens = len(set(sample_token_list)) #Daniel
+    # unique_instance_tokens = len((instance_token_list)) #Daniel
+    # unique_sample_tokens = len((sample_token_list)) #Daniel
     # print(f"""After get_instance_tokens_and_sample_tokens: 
     #     unique_instance_tokens = {unique_instance_tokens}
     #     unique_sample_tokens = {unique_sample_tokens}""") #Daniel
@@ -193,8 +193,8 @@ def remove_short_sequences(
     token_lists
         updated (shortened) token_lists for instances and samples.
     """
-    unique_instance_tokens = len(set(instance_token_list)) #Daniel
-    unique_sample_tokens = len(set(sample_token_list)) #Daniel
+    unique_instance_tokens = len((instance_token_list)) #Daniel
+    unique_sample_tokens = len((sample_token_list)) #Daniel
     print(f"""Before remove_short_sequences:
         unique_instance_tokens = {unique_instance_tokens}
         unique_sample_tokens = {unique_sample_tokens}""") #Daniel
@@ -215,8 +215,8 @@ def remove_short_sequences(
     [filtered_instance_tokens.append(instance_token_list[index]) for index in selected_indices]
     [filtered_sample_tokens.append(sample_token_list[index]) for index in selected_indices]
     
-    unique_instance_tokens = len(set(filtered_instance_tokens)) #Daniel
-    unique_sample_tokens = len(set(filtered_sample_tokens)) #Daniel
+    unique_instance_tokens = len((filtered_instance_tokens)) #Daniel
+    unique_sample_tokens = len((filtered_sample_tokens)) #Daniel
     print(f"""After remove_short_sequences:
         unique_instance_tokens = {unique_instance_tokens}
         unique_sample_tokens = {unique_sample_tokens}""") #Daniel
@@ -276,8 +276,8 @@ def extract_all_instances_per_sequence(
     [filtered_instance_tokens.append(instance_token_list[index]) for index in selected_indices]
     [filtered_sample_tokens.append(sample_token_list[index]) for index in selected_indices]
     
-    unique_instance_tokens = len(set(filtered_instance_tokens)) #Daniel
-    unique_sample_tokens = len(set(filtered_sample_tokens)) #Daniel
+    unique_instance_tokens = len((filtered_instance_tokens)) #Daniel
+    unique_sample_tokens = len((filtered_sample_tokens)) #Daniel
     print(f"""After extract_all_instances_per_sequence:
         unique_instance_tokens = {unique_instance_tokens}
         unique_sample_tokens = {unique_sample_tokens}""") #Daniel
@@ -327,8 +327,8 @@ def extract_one_instance_per_sequence(
     [filtered_instance_tokens.append(instance_token_list[index]) for index in selected_indices]
     [filtered_sample_tokens.append(sample_token_list[index]) for index in selected_indices]
     
-    unique_instance_tokens = len(set(filtered_instance_tokens)) #Daniel
-    unique_sample_tokens = len(set(filtered_sample_tokens)) #Daniel
+    unique_instance_tokens = len((filtered_instance_tokens)) #Daniel
+    unique_sample_tokens = len((filtered_sample_tokens)) #Daniel
     print(f"""After extract_one_instance_per_sequence:
         unique_instance_tokens = {unique_instance_tokens}
         unique_sample_tokens = {unique_sample_tokens}""") #Daniel

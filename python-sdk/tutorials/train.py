@@ -36,9 +36,9 @@ class NuscenesDataset(Dataset):
 
 ################################################################################################################################################
 # Load data
-version = "v1.0-mini" # v1.0-mini, v1.0-trainval
+version = "v1.0-trainval" # v1.0-mini, v1.0-trainval
 seconds_of_history_used = 2.0 # 2.0
-sequences_per_instance = "one_sequences_per_instance" # one_sequences_per_instance, non_overlapping_sequences_per_instance, all_sequences_per_instance, 
+sequences_per_instance = "non_overlapping_sequences_per_instance" # one_sequences_per_instance, non_overlapping_sequences_per_instance, all_sequences_per_instance, 
 
 train_img_tensor_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/train_img_tensor_list.pt")
 train_agent_state_vector_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/train_agent_state_vector_list.pt")
@@ -61,11 +61,11 @@ for j, val_img_tensor in enumerate(val_img_tensor_list):
 ################################################################################################################################################
 
 # For testing
-train_short_size = 12800
+train_short_size = 1000000
 short_train_img_tensor_list = train_img_tensor_list[:train_short_size]
 short_train_agent_state_vector_list = train_agent_state_vector_list[:train_short_size]
 short_train_future_xy_local_list = train_future_xy_local_list[:train_short_size]
-val_short_size = 6400
+val_short_size = 250000
 short_val_img_tensor_list = val_img_tensor_list[:val_short_size]
 short_val_agent_state_vector_list = val_agent_state_vector_list[:val_short_size]
 short_val_future_xy_local_list = val_future_xy_local_list[:val_short_size]
@@ -75,14 +75,14 @@ short_val_future_xy_local_list = val_future_xy_local_list[:val_short_size]
 train_num_datapoints = len(train_img_tensor_list)
 # print(f"train_num_datapoints whole dataset = {train_num_datapoints}")
 short_train_num_datapoints = len(short_train_img_tensor_list)
-# print(f"train_num_datapoints short = {short_train_num_datapoints}")
+print(f"train_num_datapoints short = {short_train_num_datapoints}")
 # print(f"train_img_tensor_list[0] = {train_img_tensor_list[0].size()}")
 # print(f"train_agent_state_vector_list[0] = {train_agent_state_vector_list[0].size()}")
 # print(f"train_future_xy_local_list[0] = {train_future_xy_local_list[0].size()}\n")
 val_num_datapoints = len(val_img_tensor_list)
 # print(f"val_num_datapoints whole dataset = {val_num_datapoints}")
 short_val_num_datapoints = len(short_val_img_tensor_list)
-# print(f"val_num_datapoints short = {short_val_num_datapoints}")
+print(f"val_num_datapoints short = {short_val_num_datapoints}")
 # print(f"val_img_tensor_list[0] = {val_img_tensor_list[0].size()}")
 # print(f"val_agent_state_vector_list[0] = {val_agent_state_vector_list[0].size()}")
 # print(f"val_future_xy_local_list[0] = {val_future_xy_local_list[0].size()}\n")
@@ -95,6 +95,8 @@ num_modes = 64 # 2206, 415, 64 (match with eps_traj_set)
 eps_traj_set = 8 # 2, 4, 8 (match with num_modes)
 learning_rate = 1e-4 # From Covernet paper: fixed learning rate of 1e−4
 num_epochs = 4998
+# batch accumulation parameter
+accum_iter = 4
 
 # Define datasets
 train_dataset = NuscenesDataset(train_img_tensor_list, train_agent_state_vector_list, train_future_xy_local_list)
@@ -131,8 +133,6 @@ covernet.to(device)
 # Training starts
 print("\nTraining starts:")
 
-# batch accumulation parameter
-accum_iter = 1
 
 # Open a file in append mode (will create a new file or append to an existing one)
 file_path = f"tmpResults/results_epochs={num_epochs}_eps={eps_traj_set}_batch_size={batch_size*accum_iter}_lr={learning_rate}_shuffle={shuffle}.txt"
@@ -225,7 +225,7 @@ for epoch in range(num_epochs):
             # print(f"val_batch [{val_batchCount+1}/{int(short_val_num_datapoints/batch_size)+1}], Batch Loss: {loss.item():.4f}")
      
     # Print losses for this epoch
-    thisResult = f"Epoch [{epoch+1}/{num_epochs}]: Training loss: {train_epochLoss:.3f} | Validation loss: {val_epochLoss:.3f} || Training accuracy: {train_correct/train_total*100:.1f} % | Validation accuracy: {val_correct/val_total*100:.1f} %\n"
+    thisResult = f"Epoch [{epoch+1}/{num_epochs}]: Training loss: {train_epochLoss/train_total:.5f} | Validation loss: {val_epochLoss/val_total:.5f} || Training accuracy: {train_correct/train_total*100:.1f} % | Validation accuracy: {val_correct/val_total*100:.1f} %\n"
     with open(file_path, "a") as file:
         file.write(thisResult)  # Append the text to the file
     print(thisResult)

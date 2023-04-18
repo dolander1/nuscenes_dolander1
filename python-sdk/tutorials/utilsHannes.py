@@ -51,6 +51,10 @@ def get_and_format_data(
     elif sequences_per_instance == "all_sequences_per_instance":
         instance_token_list, sample_token_list = extract_all_instances_per_sequence(seconds_of_history_used, instance_token_list, sample_token_list)
     
+    # For testing
+    instance_token_list = instance_token_list[:49]
+    sample_token_list = sample_token_list[:49]
+    
     print("Starting get_data_and_ground_truth")
     img_list, agent_state_vector_list, future_xy_local_list = get_data_and_ground_truth(nuscenes, helper, seconds_of_history_used, instance_token_list, sample_token_list)
     print("End of get_data_and_ground_truth")
@@ -256,22 +260,22 @@ def extract_all_instances_per_sequence(
     # Initialize an empty list to store the indices of encoutered items
     encouteredItems = []
     
-    # Instance token list to manipulate
-    tmp_instance_token_list = instance_token_list.copy()
-        
-    # Iterate over the list and save the fouth index of each item
+    # Count the occurrences of each instance in the list
+    instance_counts = Counter(instance_token_list)
+                
+    used_items = 0
+    
+    # Iterate over the list and save all samples possible
     for index, item in enumerate(instance_token_list):
-
-        # Count the occurrences of each instance in the list
-        instance_counts = Counter(tmp_instance_token_list)
-        
-        if not encouteredItems.__contains__(item):
-            if instance_counts[item] > (int(2*seconds_of_history_used) - 1):
-                selected_indices.append(index + int(2*seconds_of_history_used)-1)
-                tmp_instance_token_list.remove(item)
-            else:
-                encouteredItems.append(item) 
             
+        if not encouteredItems.__contains__(item):
+            if (instance_counts[item] - used_items) > (int(2*seconds_of_history_used)-1):
+                selected_indices.append(index + int(2*seconds_of_history_used)-1)
+                used_items += 1
+            else:
+                encouteredItems.append(item)
+                used_items = 0
+
 
     filtered_instance_tokens = []
     filtered_sample_tokens = []
@@ -314,25 +318,34 @@ def extract_non_overlapping_instances_per_sequence(
 
     # Initialize an empty list to store the indices of encoutered items
     encouteredItems = []
+
+    # Count the occurrences of each instance in the list
+    instance_counts = Counter(instance_token_list)
+                
+    skip_counter = 0
+    used_items = 0
     
-    # Instance token list to manipulate
-    tmp_instance_token_list = instance_token_list.copy()
-        
-    # Iterate over the list and save the fouth index of each item
+    # Iterate over the list and all non-overlapping sequences
     for index, item in enumerate(instance_token_list):
+#         print(f"skip_counter = {skip_counter}")
+#         print(f"skip_counter%(int(2*seconds_of_history_used+1)) == 0 = {skip_counter%(int(2*seconds_of_history_used+1)) == 0}")
+#         print(f"used-items = {used_items}")
 
-        # Count the occurrences of each instance in the list
-        instance_counts = Counter(tmp_instance_token_list)
-        
-        if not encouteredItems.__contains__(item):
-            if instance_counts[item] > (int(2*seconds_of_history_used)-1):
-                selected_indices.append(index + int(2*seconds_of_history_used)-1)
-                for _ in range(int(2*seconds_of_history_used)):
-                    tmp_instance_token_list.remove(item)
-            else:
-                encouteredItems.append(item) 
+        if skip_counter%(int(2*seconds_of_history_used+1)) == 0:
             
+            if not encouteredItems.__contains__(item):
+                if (instance_counts[item] - used_items) > (int(2*seconds_of_history_used)-1):
+                    selected_indices.append(index + int(2*seconds_of_history_used)-1)
+                    skip_counter += 1
+                    used_items += 1
+                else:
+                    encouteredItems.append(item)
+                    used_items = 0
+        else:
+            skip_counter += 1
+            used_items += 1
 
+            
     filtered_instance_tokens = []
     filtered_sample_tokens = []
     [filtered_instance_tokens.append(instance_token_list[index]) for index in selected_indices]
@@ -378,7 +391,6 @@ def extract_one_instance_per_sequence(
 
     # Iterate over the list and save the fouth index of each item
     for index, item in enumerate(instance_token_list):
-
         if not encouteredItems.__contains__(item):
             selected_indices.append(index + int(2*seconds_of_history_used)-1)
             encouteredItems.append(item) 

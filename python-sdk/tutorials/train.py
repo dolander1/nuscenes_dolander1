@@ -135,7 +135,7 @@ print("\nTraining starts:")
 
 
 # Open a file in append mode (will create a new file or append to an existing one)
-file_path = f"tmpResults/results_epochs={num_epochs}_eps={eps_traj_set}_batch_size={batch_size*accum_iter}_lr={learning_rate}_shuffle={shuffle}.txt"
+file_path = f"tmpResults/results_epochs={num_epochs}_seconds_of_history_used={seconds_of_history_used}_{sequences_per_instance}.txt"
 results_string = ""
 
 # Training and validation loop

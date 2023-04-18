@@ -51,9 +51,9 @@ def get_and_format_data(
     elif sequences_per_instance == "all_sequences_per_instance":
         instance_token_list, sample_token_list = extract_all_instances_per_sequence(seconds_of_history_used, instance_token_list, sample_token_list)
     
-    # For testing
-    instance_token_list = instance_token_list[:49]
-    sample_token_list = sample_token_list[:49]
+#     # For testing
+#     instance_token_list = instance_token_list[:49]
+#     sample_token_list = sample_token_list[:49]
     
     print("Starting get_data_and_ground_truth")
     img_list, agent_state_vector_list, future_xy_local_list = get_data_and_ground_truth(nuscenes, helper, seconds_of_history_used, instance_token_list, sample_token_list)

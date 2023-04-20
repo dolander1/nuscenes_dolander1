@@ -1,0 +1,1 @@
+Epoch [1/4998]: Training loss: 0.21202 | Validation loss: 0.19580 || Training accuracy: 10.4 % | Validation accuracy: 20.2 %

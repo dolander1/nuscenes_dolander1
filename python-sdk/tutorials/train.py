@@ -38,7 +38,7 @@ class NuscenesDataset(Dataset):
 # Load data
 version = "v1.0-trainval" # v1.0-mini, v1.0-trainval
 seconds_of_history_used = 2.0 # 2.0
-sequences_per_instance = "non_overlapping_sequences_per_instance" # one_sequences_per_instance, non_overlapping_sequences_per_instance, all_sequences_per_instance, 
+sequences_per_instance = "one_sequences_per_instance" # one_sequences_per_instance, non_overlapping_sequences_per_instance, all_sequences_per_instance, 
 
 train_img_tensor_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/train_img_tensor_list.pt")
 train_agent_state_vector_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/train_agent_state_vector_list.pt")
@@ -61,11 +61,11 @@ for j, val_img_tensor in enumerate(val_img_tensor_list):
 ################################################################################################################################################
 
 # For testing
-train_short_size = 1000000
+train_short_size = 100
 short_train_img_tensor_list = train_img_tensor_list[:train_short_size]
 short_train_agent_state_vector_list = train_agent_state_vector_list[:train_short_size]
 short_train_future_xy_local_list = train_future_xy_local_list[:train_short_size]
-val_short_size = 250000
+val_short_size = 50
 short_val_img_tensor_list = val_img_tensor_list[:val_short_size]
 short_val_agent_state_vector_list = val_agent_state_vector_list[:val_short_size]
 short_val_future_xy_local_list = val_future_xy_local_list[:val_short_size]
@@ -94,7 +94,7 @@ shuffle = True # Set to True if you want to shuffle the data in the dataloader
 num_modes = 64 # 2206, 415, 64 (match with eps_traj_set)
 eps_traj_set = 8 # 2, 4, 8 (match with num_modes)
 learning_rate = 1e-4 # From Covernet paper: fixed learning rate of 1e−4
-num_epochs = 4996
+num_epochs = 500
 accum_iter = 4 # batch accumulation parameter, multiplies batch_size
 
 # Define datasets
@@ -134,7 +134,7 @@ print("\nTraining starts:")
 
 
 # Open a file in append mode (will create a new file or append to an existing one)
-file_path = f"tmpResults/results_epochs={num_epochs}_seconds_of_history_used={seconds_of_history_used}_{sequences_per_instance}.txt"
+file_path = f"tmpResults/results_epochs={num_epochs}_seconds_of_history_used={seconds_of_history_used}_{sequences_per_instance}"
 results_string = ""
 
 # Training and validation loop
@@ -185,6 +185,8 @@ for epoch in range(num_epochs):
             closest_lattice_trajectory = similarity_function(torch.Tensor(lattice).to(device), ground_truth)
             train_total += 1
             train_correct += (predicted == closest_lattice_trajectory).sum().item()
+            print("Train Predicted lattice trajectory:", predicted.item())
+            print("Train Actual closest lattice trajectory:", closest_lattice_trajectory.item())
 
         # Print loss for this train_batch
         # print(f"train_batch [{train_batchCount+1}/{int(short_train_num_datapoints/batch_size)+1}], Batch Loss: {loss.item():.4f}")
@@ -212,24 +214,35 @@ for epoch in range(num_epochs):
             # Compute loss
             loss = loss_function(logits, ground_truth_trajectory)
             val_epochLoss += loss.item()
+            
+#             _, predicteds = torch.max(logits, 1)
+#             print(f"predicteds = {predicteds}")
 
             # Compute accuracy
             for logit, ground_truth in zip(logits, ground_truth_trajectory):
                 _, predicted = torch.max(logit, 0)
+#                 print(f"predicted = {predicted}")
+
                 closest_lattice_trajectory = similarity_function(torch.Tensor(lattice).to(device), ground_truth)
                 val_total += 1
                 val_correct += (predicted == closest_lattice_trajectory).sum().item()
+                print("Val Predicted lattice trajectory:", predicted.item())
+                print("Val Actual closest lattice trajectory:", closest_lattice_trajectory.item())
 
             # Print loss for this val_batch
             # print(f"val_batch [{val_batchCount+1}/{int(short_val_num_datapoints/batch_size)+1}], Batch Loss: {loss.item():.4f}")
      
     # Print losses for this epoch
     thisResult = f"Epoch [{epoch+1}/{num_epochs}]: Training loss: {train_epochLoss/train_total:.5f} | Validation loss: {val_epochLoss/val_total:.5f} || Training accuracy: {train_correct/train_total*100:.1f} % | Validation accuracy: {val_correct/val_total*100:.1f} %\n"
-    with open(file_path, "a") as file:
+    with open(f'{file_path}.txt', "a") as file:
         file.write(thisResult)  # Append the text to the file
     print(thisResult)
+    
+    # Save weights every epoch
+    torch.save(covernet.state_dict(), f'{file_path}_weights.pth')
 
 
 # Training complete
 print("Training complete!")
+
 

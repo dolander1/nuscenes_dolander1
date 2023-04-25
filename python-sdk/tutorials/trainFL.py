@@ -218,6 +218,7 @@ for epoch in range(num_epochs):
 #             print(f"predicted.shape = {predicted.shape}") # [batch_size]
 #             print(f"logits.shape = {logits.shape}") # [batch_size, num_modes]
             
+            # Accuracy
             for index, ground_truth in enumerate(ground_truth_trajectory):
                 closest_lattice_trajectory = similarity_function(lattice, ground_truth)
                 val_correct += (predicted[index] == closest_lattice_trajectory)#.sum().item()

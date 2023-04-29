@@ -52,21 +52,23 @@ val_future_xy_local_list = torch.load(f"dataLists/{version}/{sequences_per_insta
 
 # Squeeze for correct dimensions
 for i, train_img_tensor in enumerate(train_img_tensor_list):
-    train_img_tensor_list[i] = torch.squeeze(train_img_tensor, dim=0)
+    dummy = torch.nn.functional.interpolate(train_img_tensor, scale_factor=1/4, mode='bilinear')
+    train_img_tensor_list[i] = torch.squeeze(dummy, dim=0)
     train_agent_state_vector_list[i] = torch.squeeze(train_agent_state_vector_list[i], dim=0)
-    
+
 for j, val_img_tensor in enumerate(val_img_tensor_list):
-    val_img_tensor_list[j] = torch.squeeze(val_img_tensor, dim=0)
+    dummy = torch.nn.functional.interpolate(val_img_tensor, scale_factor=1/4, mode='bilinear')
+    val_img_tensor_list[j] = torch.squeeze(dummy, dim=0)
     val_agent_state_vector_list[j] = torch.squeeze(val_agent_state_vector_list[j], dim=0)
 
 
 ################################################################################################################################################
 # For testing
-train_short_size = 10
+train_short_size = 2048
 short_train_img_tensor_list = train_img_tensor_list[:train_short_size]
 short_train_agent_state_vector_list = train_agent_state_vector_list[:train_short_size]
 short_train_future_xy_local_list = train_future_xy_local_list[:train_short_size]
-val_short_size = 2
+val_short_size = 512
 short_val_img_tensor_list = val_img_tensor_list[:val_short_size]
 short_val_agent_state_vector_list = val_agent_state_vector_list[:val_short_size]
 short_val_future_xy_local_list = val_future_xy_local_list[:val_short_size]
@@ -84,13 +86,13 @@ print(f"val_num_datapoints short = {short_val_num_datapoints}")
 
 
 # Variables
-batch_size = 16
+batch_size = 8
 shuffle = True # Set to True if you want to shuffle the data in the dataloader
 num_modes = 64 # 2206, 415, 64 (match with eps_traj_set)
 eps_traj_set = 8 # 2, 4, 8 (match with num_modes)
 learning_rate = 1e-4 # From Covernet paper: fixed learning rate of 1e−4
-num_epochs = 2
-accum_iter = 4 # batch accumulation parameter, multiplies batch_size
+num_epochs = 57
+accum_iter = 1 # batch accumulation parameter, multiplies batch_size
 
 # Define datasets
 train_shortDataset = NuscenesDataset(short_train_img_tensor_list, short_train_agent_state_vector_list, short_train_future_xy_local_list)
@@ -126,10 +128,10 @@ print("\nTraining starts:")
 
 
 # Open a file in append mode (will create a new file or append to an existing one)
-file_path = f"tmpResults/results_epochs={num_epochs}_seconds_of_history_used={seconds_of_history_used}_{sequences_per_instance}"
+file_path = f"tmpResults/results_epochs={num_epochs}"
 results_string = ""
 logits_file = f'{file_path}_logits.npy'
-gt_traj_file = f'{file_path}_ground_truth_trajectory.npy'
+gt_traj_file = f'{file_path}_ground_truth.npy'
 
 
 # Training and validation loop
@@ -238,23 +240,20 @@ for epoch in range(num_epochs):
         # Concatenate the lists to create numpy arrays
         logits_array = np.concatenate(logits_list, axis=0)
         gt_traj_array = np.concatenate(gt_traj_list, axis=0)
-        # save numpy arrays in files
-        np.save(logits_file, logits_array)
-        np.save(gt_traj_file, gt_traj_array)
     else:
         logits_array = np.load(logits_file)
         gt_traj_array = np.load(gt_traj_file)
         # Concatenate the lists to create numpy arrays
         logits_array = np.concatenate([logits_array] + logits_list, axis=0)
         gt_traj_array = np.concatenate([gt_traj_array] + gt_traj_list, axis=0)
-        # save numpy arrays in files
-        np.save(logits_file, logits_array)
-        np.save(gt_traj_file, gt_traj_array)
+    # save numpy arrays in files
+    np.save(logits_file, logits_array)
+    np.save(gt_traj_file, gt_traj_array)
   
 
     # Print losses for this epoch
     thisResult = f"Epoch [{epoch+1}/{num_epochs}]: Training loss: {train_epochLoss/train_total:.5f} | Validation loss: {val_epochLoss/val_total:.5f} || Training accuracy: {train_correct/train_total*100:.1f} % | Validation accuracy: {val_correct/val_total*100:.1f} %\n"
-    with open(f'{file_path}.txt', "a") as file:
+    with open(f'{file_path}_loss_and_acc.txt', "a") as file:
         file.write(thisResult)  # Append the text to the file
     print(thisResult)
     

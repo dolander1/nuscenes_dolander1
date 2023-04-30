@@ -91,7 +91,7 @@ shuffle = True # Set to True if you want to shuffle the data in the dataloader
 num_modes = 64 # 2206, 415, 64 (match with eps_traj_set)
 eps_traj_set = 8 # 2, 4, 8 (match with num_modes)
 learning_rate = 1e-4 # From Covernet paper: fixed learning rate of 1e−4
-num_epochs = 300
+num_epochs = 301
 accum_iter = 1 # batch accumulation parameter, multiplies batch_size
 
 # Define datasets
@@ -223,6 +223,8 @@ for epoch in range(num_epochs):
             # Accuracy
             for index, ground_truth in enumerate(ground_truth_trajectory):
                 closest_lattice_trajectory = similarity_function(lattice, ground_truth)
+#                 print(f"predicted[index] = {predicted[index]}")
+#                 print(f"closest_lattice_trajectory = {closest_lattice_trajectory}")
                 val_correct += (predicted[index] == closest_lattice_trajectory)#.sum().item()
 #                 print(f"closest_lattice_trajectory index = {closest_lattice_trajectory}") # 1
 #                 print(f"Predicted lattice trajectory index = {predicted[index].item()}") # 1

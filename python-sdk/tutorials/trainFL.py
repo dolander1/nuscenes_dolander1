@@ -50,7 +50,7 @@ val_img_tensor_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/
 val_agent_state_vector_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/val_agent_state_vector_list.pt")
 val_future_xy_local_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/val_future_xy_local_list.pt")
 
-scale_factor = 1/50 # downsample images
+scale_factor = 1/2 # downsample images
 # Squeeze for correct dimensions
 for i, train_img_tensor in enumerate(train_img_tensor_list):
     dummy = torch.nn.functional.interpolate(train_img_tensor, scale_factor=scale_factor, mode='bilinear')
@@ -93,7 +93,7 @@ num_modes = 64 # 2206, 415, 64 (match with eps_traj_set)
 eps_traj_set = 8 # 2, 4, 8 (match with num_modes)
 learning_rate = 1e-4 # From Covernet paper: fixed learning rate of 1e−4
 start_epoch = 0
-num_epochs = 500
+num_epochs = 501
 accum_iter = 1 # batch accumulation parameter, multiplies batch_size
 
 # Define datasets
@@ -139,7 +139,7 @@ val_logits_file = f'{file_path}_val_logits.npy'
 val_gt_traj_file = f'{file_path}_val_ground_truth.npy'
 
 # Training and validation loop
-for epoch in range(start_epoch,num_epochs+50+20):
+for epoch in range(start_epoch,num_epochs):
     
     # TRAINING
     covernet.train()

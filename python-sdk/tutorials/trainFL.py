@@ -89,11 +89,11 @@ print(f"val_num_datapoints short = {short_val_num_datapoints}")
 # Variables
 batch_size = 8
 shuffle = True # Set to True if you want to shuffle the data in the dataloader
-num_modes = 64 # 2206, 415, 64 (match with eps_traj_set)
-eps_traj_set = 8 # 2, 4, 8 (match with num_modes)
+num_modes = 2206 # 2206, 415, 64 (match with eps_traj_set)
+eps_traj_set = 2 # 2, 4, 8 (match with num_modes)
 learning_rate = 1e-4 # From Covernet paper: fixed learning rate of 1e−4
 start_epoch = 0
-num_epochs = 501
+num_epochs = 502
 accum_iter = 1 # batch accumulation parameter, multiplies batch_size
 
 # Define datasets

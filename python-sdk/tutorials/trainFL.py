@@ -50,14 +50,15 @@ val_img_tensor_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/
 val_agent_state_vector_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/val_agent_state_vector_list.pt")
 val_future_xy_local_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/val_future_xy_local_list.pt")
 
+scale_factor = 1/50 # downsample images
 # Squeeze for correct dimensions
 for i, train_img_tensor in enumerate(train_img_tensor_list):
-    dummy = torch.nn.functional.interpolate(train_img_tensor, scale_factor=1/4, mode='bilinear')
+    dummy = torch.nn.functional.interpolate(train_img_tensor, scale_factor=scale_factor, mode='bilinear')
     train_img_tensor_list[i] = torch.squeeze(dummy, dim=0)
     train_agent_state_vector_list[i] = torch.squeeze(train_agent_state_vector_list[i], dim=0)
 
 for j, val_img_tensor in enumerate(val_img_tensor_list):
-    dummy = torch.nn.functional.interpolate(val_img_tensor, scale_factor=1/4, mode='bilinear')
+    dummy = torch.nn.functional.interpolate(val_img_tensor, scale_factor=scale_factor, mode='bilinear')
     val_img_tensor_list[j] = torch.squeeze(dummy, dim=0)
     val_agent_state_vector_list[j] = torch.squeeze(val_agent_state_vector_list[j], dim=0)
 
@@ -91,7 +92,8 @@ shuffle = True # Set to True if you want to shuffle the data in the dataloader
 num_modes = 64 # 2206, 415, 64 (match with eps_traj_set)
 eps_traj_set = 8 # 2, 4, 8 (match with num_modes)
 learning_rate = 1e-4 # From Covernet paper: fixed learning rate of 1e−4
-num_epochs = 301
+start_epoch = 0
+num_epochs = 500
 accum_iter = 1 # batch accumulation parameter, multiplies batch_size
 
 # Define datasets
@@ -102,9 +104,14 @@ val_shortDataset = NuscenesDataset(short_val_img_tensor_list, short_val_agent_st
 train_shortDataloader = DataLoader(train_shortDataset, batch_size=batch_size, shuffle=shuffle)
 val_shortDataloader = DataLoader(val_shortDataset, batch_size=batch_size, shuffle=shuffle)
 
+# File path
+file_path = f"tmpResults/results_epochs={num_epochs}"
+
+
 # Initialize the CoverNet model
 backbone = ResNetBackbone('resnet50') 
 covernet = CoverNetNoRelu(backbone, num_modes)
+# covernet.load_state_dict(torch.load(f'{file_path}_weights.pth'))
 
 # Lattice and similarity function
 with open(f'data/sets/nuscenes-prediction-challenge-trajectory-sets/epsilon_{eps_traj_set}.pkl', 'rb') as f:
@@ -125,23 +132,22 @@ lattice = torch.Tensor(lattice).to(device)
 
 # Training starts
 print("\nTraining starts:")
-
-
-# Open a file in append mode (will create a new file or append to an existing one)
-file_path = f"tmpResults/results_epochs={num_epochs}"
 results_string = ""
-logits_file = f'{file_path}_logits.npy'
-gt_traj_file = f'{file_path}_ground_truth.npy'
-
+train_logits_file = f'{file_path}_train_logits.npy'
+train_gt_traj_file = f'{file_path}_train_ground_truth.npy'
+val_logits_file = f'{file_path}_val_logits.npy'
+val_gt_traj_file = f'{file_path}_val_ground_truth.npy'
 
 # Training and validation loop
-for epoch in range(num_epochs):
+for epoch in range(start_epoch,num_epochs+50+20):
     
     # TRAINING
     covernet.train()
     train_epochLoss = 0
     train_total = 0
     train_correct = 0
+    train_logits_list = [] # create an empty list to store logits
+    train_gt_traj_list = [] # create an empty list to store ground_truth_trajectory
     for train_batchCount, train_batch in enumerate(train_shortDataloader):
 
         # Get train_batch data
@@ -182,20 +188,37 @@ for epoch in range(num_epochs):
             closest_lattice_trajectory = similarity_function(lattice, ground_truth)
             train_total += 1
             train_correct += (predicted == closest_lattice_trajectory)#.sum().item()
-#             print("Train Predicted lattice trajectory:", predicted.item())
-#             print("Train Actual closest lattice trajectory:", closest_lattice_trajectory.item())
 
-        # Print loss for this train_batch
-        # print(f"train_batch [{train_batchCount+1}/{int(short_train_num_datapoints/batch_size)+1}], Batch Loss: {loss.item():.4f}")
-     
+            
+        # Create lists of saved data
+        train_logits_list.append(logits.cpu().detach().numpy())
+        train_gt_traj_list.append(ground_truth_trajectory.cpu().detach().numpy())
+
+    # Save logits and ground_truth_trajectory in separate files
+    if epoch == 0:
+        # Concatenate the lists to create numpy arrays
+        train_logits_array = np.concatenate(train_logits_list, axis=0)
+        train_gt_traj_array = np.concatenate(train_gt_traj_list, axis=0)
+    else:
+        train_logits_array = np.load(train_logits_file)
+        train_gt_traj_array = np.load(train_gt_traj_file)
+        # Concatenate the lists to create numpy arrays
+        train_logits_array = np.concatenate([train_logits_array] + train_logits_list, axis=0)
+        train_gt_traj_array = np.concatenate([train_gt_traj_array] + train_gt_traj_list, axis=0)
+    # save numpy arrays in files
+    np.save(train_logits_file, train_logits_array)
+    np.save(train_gt_traj_file, train_gt_traj_array)
+    
+    ######################################################################################################################
+    
     
     # VALIDATION
     covernet.eval()
     val_epochLoss = 0
     val_total = 0
     val_correct = 0
-    logits_list = [] # create an empty list to store logits
-    gt_traj_list = [] # create an empty list to store ground_truth_trajectory
+    val_logits_list = [] # create an empty list to store logits
+    val_gt_traj_list = [] # create an empty list to store ground_truth_trajectory
     with torch.no_grad():
         for val_batchCount, val_batch in enumerate(val_shortDataloader):
 
@@ -234,23 +257,23 @@ for epoch in range(num_epochs):
                 
             
             # Create lists of saved data
-            logits_list.append(logits.cpu().numpy())
-            gt_traj_list.append(ground_truth_trajectory.cpu().numpy())
+            val_logits_list.append(logits.cpu().numpy())
+            val_gt_traj_list.append(ground_truth_trajectory.cpu().numpy())
 
     # Save logits and ground_truth_trajectory in separate files
     if epoch == 0:
         # Concatenate the lists to create numpy arrays
-        logits_array = np.concatenate(logits_list, axis=0)
-        gt_traj_array = np.concatenate(gt_traj_list, axis=0)
+        val_logits_array = np.concatenate(val_logits_list, axis=0)
+        val_gt_traj_array = np.concatenate(val_gt_traj_list, axis=0)
     else:
-        logits_array = np.load(logits_file)
-        gt_traj_array = np.load(gt_traj_file)
+        val_logits_array = np.load(val_logits_file)
+        val_gt_traj_array = np.load(val_gt_traj_file)
         # Concatenate the lists to create numpy arrays
-        logits_array = np.concatenate([logits_array] + logits_list, axis=0)
-        gt_traj_array = np.concatenate([gt_traj_array] + gt_traj_list, axis=0)
+        val_logits_array = np.concatenate([val_logits_array] + val_logits_list, axis=0)
+        val_gt_traj_array = np.concatenate([val_gt_traj_array] + val_gt_traj_list, axis=0)
     # save numpy arrays in files
-    np.save(logits_file, logits_array)
-    np.save(gt_traj_file, gt_traj_array)
+    np.save(val_logits_file, val_logits_array)
+    np.save(val_gt_traj_file, val_gt_traj_array)
   
 
     # Print losses for this epoch

@@ -500,7 +500,7 @@ class CoverNetNoRelu(nn.Module):
     def __init__(self, backbone: nn.Module, num_modes: int,
                  n_hidden_layers: List[int] = None,
                  input_shape: Tuple[int, int, int] = (3, 500, 500)): #(3, 500, 500) 
-        print("hej from CoverNetNoRelu")
+        print("hej 500 500 from CoverNetNoRelu")
         """
         Inits Covernet.
         :param backbone: Backbone model. Typically ResNetBackBone or MobileNetBackbone

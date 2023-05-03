@@ -94,10 +94,10 @@ def get_and_format_data_with_location(
     img_list_Singapore, agent_state_vector_list_Singapore, future_xy_local_list_Singapore = get_data_and_ground_truth(nuscenes, helper, seconds_of_history_used, instance_token_list_Singapore, sample_token_list_Singapore)
     print("End of get_data_and_ground_truth")
     
-    img_tensor_Boston = create_img_tensor(img_list_Boston)
-    img_tensor_Singapore = create_img_tensor(img_list_Singapore)
+    img_tensor_list_Boston = create_img_tensor(img_list_Boston)
+    img_tensor_list_Singapore = create_img_tensor(img_list_Singapore)
 
-    return img_list_Boston, img_tensor_Boston, agent_state_vector_list_Boston, future_xy_local_list_Boston, img_list_Singapore, img_tensor_Singapore, agent_state_vector_list_Singapore, future_xy_local_list_Singapore
+    return img_list_Boston, img_tensor_list_Boston, agent_state_vector_list_Boston, future_xy_local_list_Boston, img_list_Singapore, img_tensor_list_Singapore, agent_state_vector_list_Singapore, future_xy_local_list_Singapore
 
 def get_instance_tokens_and_sample_tokens(
         data_set: List[str]

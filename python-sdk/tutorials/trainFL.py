@@ -38,7 +38,7 @@ class NuscenesDataset(Dataset):
 
 ################################################################################################################################################
 # Load data
-version = "v1.0-trainval" # v1.0-mini, v1.0-trainval
+version = "v1.0-mini" # v1.0-mini, v1.0-trainval
 seconds_of_history_used = 2.0 # 2.0
 sequences_per_instance = "one_sequences_per_instance" # one_sequences_per_instance, non_overlapping_sequences_per_instance, all_sequences_per_instance, 
 

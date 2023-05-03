@@ -63,6 +63,42 @@ def get_and_format_data(
 
     return img_list, img_tensor, agent_state_vector_list, future_xy_local_list
 
+def get_and_format_data_with_location(
+        version: str = 'v1.0-mini',
+        DATAROOT: str = 'data/sets/nuscenes',
+        subset: str = 'mini_train',
+        seconds_of_history_used: float = 2.0,
+        sequences_per_instance: str = 'one_sequences_per_instance'
+) -> Tuple[List[np.ndarray], List[np.ndarray], List[Tuple[np.ndarray, np.ndarray]], List[np.ndarray], List[np.ndarray], List[Tuple[np.ndarray, np.ndarray]]]:
+    
+    nuscenes = NuScenes(version, dataroot=DATAROOT)
+    helper = PredictHelper(nuscenes)
+
+    data_set = get_prediction_challenge_split(subset, DATAROOT)
+
+    instance_token_list, sample_token_list = get_instance_tokens_and_sample_tokens(data_set)
+
+    instance_token_list, sample_token_list = remove_short_sequences(seconds_of_history_used, instance_token_list, sample_token_list)
+
+    # Choose all or one sequence per instance
+    if sequences_per_instance == "one_sequences_per_instance":
+        instance_token_list, sample_token_list = extract_one_instance_per_sequence(seconds_of_history_used, instance_token_list, sample_token_list)
+    elif sequences_per_instance == "non_overlapping_sequences_per_instance":
+        instance_token_list, sample_token_list = extract_non_overlapping_instances_per_sequence(seconds_of_history_used, instance_token_list, sample_token_list)
+    elif sequences_per_instance == "all_sequences_per_instance":
+        instance_token_list, sample_token_list = extract_all_instances_per_sequence(seconds_of_history_used, instance_token_list, sample_token_list)
+    
+    instance_token_list_Boston, sample_token_list_Boston, instance_token_list_Singapore, sample_token_list_Singapore = separate_lists_on_location(instance_token_list, sample_token_list, nuscenes)
+    print("Starting get_data_and_ground_truth")
+    img_list_Boston, agent_state_vector_list_Boston, future_xy_local_list_Boston = get_data_and_ground_truth(nuscenes, helper, seconds_of_history_used, instance_token_list_Boston, sample_token_list_Boston)
+    img_list_Singapore, agent_state_vector_list_Singapore, future_xy_local_list_Singapore = get_data_and_ground_truth(nuscenes, helper, seconds_of_history_used, instance_token_list_Singapore, sample_token_list_Singapore)
+    print("End of get_data_and_ground_truth")
+    
+    img_tensor_Boston = create_img_tensor(img_list_Boston)
+    img_tensor_Singapore = create_img_tensor(img_list_Singapore)
+
+    return img_list_Boston, img_tensor_Boston, agent_state_vector_list_Boston, future_xy_local_list_Boston, img_list_Singapore, img_tensor_Singapore, agent_state_vector_list_Singapore, future_xy_local_list_Singapore
+
 def get_instance_tokens_and_sample_tokens(
         data_set: List[str]
 ) -> Tuple[List[str], List[str]]:
@@ -416,6 +452,36 @@ def create_img_tensor(img_list: List[np.ndarray]):
         image_tensor.append(torch.Tensor(item).permute(2, 0, 1).unsqueeze(0))
     
     return image_tensor
+
+def separate_lists_on_location(instance_token_list, sample_token_list, nusc):
+    instance_token_list_boston = []
+    sample_token_list_boston = []
+    instance_token_list_singapore = []
+    sample_token_list_singapore = []
+
+    for instance_token, sample_token in zip(instance_token_list, sample_token_list):
+        location = get_location_from_sample_token(sample_token, nusc)
+
+        if location == "Boston":
+            instance_token_list_boston.append(instance_token)
+            sample_token_list_boston.append(sample_token)
+        elif location == "Singapore":
+            instance_token_list_singapore.append(instance_token)
+            sample_token_list_singapore.append(sample_token)
+
+    return instance_token_list_boston, sample_token_list_boston, instance_token_list_singapore, sample_token_list_singapore
+    
+def get_location_from_sample_token(sample_token, nusc):
+    sample = nusc.get('sample', sample_token)
+    scene = nusc.get('scene', sample['scene_token'])
+    log = nusc.get('log', scene['log_token'])
+
+    if "boston" in log['location'].lower():
+        return "Boston"
+    elif "singapore" in log['location'].lower():
+        return "Singapore"
+    else:
+        return "Unknown location"
 
 
 ########################################################################################################################

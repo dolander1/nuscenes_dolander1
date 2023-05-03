@@ -50,7 +50,7 @@ val_img_tensor_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/
 val_agent_state_vector_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/val_agent_state_vector_list.pt")
 val_future_xy_local_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/val_future_xy_local_list.pt")
 
-scale_factor = 1/2 # downsample images
+scale_factor = 1/10 # downsample images
 # Squeeze for correct dimensions
 for i, train_img_tensor in enumerate(train_img_tensor_list):
     dummy = torch.nn.functional.interpolate(train_img_tensor, scale_factor=scale_factor, mode='bilinear')
@@ -93,7 +93,7 @@ num_modes = 415 # 2206, 415, 64 (match with eps_traj_set)
 eps_traj_set = 4 # 2, 4, 8 (match with num_modes)
 learning_rate = 1e-4 # From Covernet paper: fixed learning rate of 1e−4
 start_epoch = 0
-num_epochs = 204
+num_epochs = 2
 accum_iter = 1 # batch accumulation parameter, multiplies batch_size
 
 
@@ -106,7 +106,7 @@ train_shortDataloader = DataLoader(train_shortDataset, batch_size=batch_size, sh
 val_shortDataloader = DataLoader(val_shortDataset, batch_size=batch_size, shuffle=shuffle)
 
 # File path
-file_path = f"tmpResults/results_epochs={num_epochs}"
+file_path = f"tmpResults/results_epochs={num_epochs}" # To flower
 
 
 # Initialize the CoverNet model
@@ -133,11 +133,11 @@ lattice = torch.Tensor(lattice).to(device)
 
 # Training starts
 print("\nTraining starts:")
-results_string = ""
-train_logits_file = f'{file_path}_train_logits.npy'
-train_gt_traj_file = f'{file_path}_train_ground_truth.npy'
-val_logits_file = f'{file_path}_val_logits.npy'
-val_gt_traj_file = f'{file_path}_val_ground_truth.npy'
+results_string = "" # To flower
+train_logits_file = f'{file_path}_train_logits.npy' # To flower
+train_gt_traj_file = f'{file_path}_train_ground_truth.npy' # To flower
+val_logits_file = f'{file_path}_val_logits.npy' # To flower
+val_gt_traj_file = f'{file_path}_val_ground_truth.npy' # To flower
 
 # Training and validation loop
 for epoch in range(start_epoch,num_epochs):
@@ -147,8 +147,8 @@ for epoch in range(start_epoch,num_epochs):
     train_epochLoss = 0
     train_total = 0
     train_correct = 0
-    train_logits_list = [] # create an empty list to store logits
-    train_gt_traj_list = [] # create an empty list to store ground_truth_trajectory
+    train_logits_list = [] # To flower
+    train_gt_traj_list = [] # To flower
     for train_batchCount, train_batch in enumerate(train_shortDataloader):
 
         # Get train_batch data
@@ -192,23 +192,23 @@ for epoch in range(start_epoch,num_epochs):
 
             
         # Create lists of saved data
-        train_logits_list.append(logits.cpu().detach().numpy())
-        train_gt_traj_list.append(ground_truth_trajectory.cpu().detach().numpy())
+        train_logits_list.append(logits.cpu().detach().numpy()) # To flower
+        train_gt_traj_list.append(ground_truth_trajectory.cpu().detach().numpy())  # To flower
 
     # Save logits and ground_truth_trajectory in separate files
-    if epoch == 0:
+    if epoch == 0:  # To flower
         # Concatenate the lists to create numpy arrays
-        train_logits_array = np.concatenate(train_logits_list, axis=0)
-        train_gt_traj_array = np.concatenate(train_gt_traj_list, axis=0)
-    else:
-        train_logits_array = np.load(train_logits_file)
-        train_gt_traj_array = np.load(train_gt_traj_file)
+        train_logits_array = np.concatenate(train_logits_list, axis=0) # To flower
+        train_gt_traj_array = np.concatenate(train_gt_traj_list, axis=0) # To flower
+    else: # To flower
+        train_logits_array = np.load(train_logits_file) # To flower
+        train_gt_traj_array = np.load(train_gt_traj_file) # To flower
         # Concatenate the lists to create numpy arrays
-        train_logits_array = np.concatenate([train_logits_array] + train_logits_list, axis=0)
-        train_gt_traj_array = np.concatenate([train_gt_traj_array] + train_gt_traj_list, axis=0)
+        train_logits_array = np.concatenate([train_logits_array] + train_logits_list, axis=0) # To flower
+        train_gt_traj_array = np.concatenate([train_gt_traj_array] + train_gt_traj_list, axis=0) # To flower
     # save numpy arrays in files
-    np.save(train_logits_file, train_logits_array)
-    np.save(train_gt_traj_file, train_gt_traj_array)
+    np.save(train_logits_file, train_logits_array) # To flower
+    np.save(train_gt_traj_file, train_gt_traj_array) # To flower
     
     ######################################################################################################################
     
@@ -218,8 +218,8 @@ for epoch in range(start_epoch,num_epochs):
     val_epochLoss = 0
     val_total = 0
     val_correct = 0
-    val_logits_list = [] # create an empty list to store logits
-    val_gt_traj_list = [] # create an empty list to store ground_truth_trajectory
+    val_logits_list = [] # To flower
+    val_gt_traj_list = [] # To flower
     with torch.no_grad():
         for val_batchCount, val_batch in enumerate(val_shortDataloader):
 
@@ -258,33 +258,33 @@ for epoch in range(start_epoch,num_epochs):
                 
             
             # Create lists of saved data
-            val_logits_list.append(logits.cpu().numpy())
-            val_gt_traj_list.append(ground_truth_trajectory.cpu().numpy())
+            val_logits_list.append(logits.cpu().numpy()) # To flower
+            val_gt_traj_list.append(ground_truth_trajectory.cpu().numpy()) # To flower
 
     # Save logits and ground_truth_trajectory in separate files
-    if epoch == 0:
+    if epoch == 0: # To flower
         # Concatenate the lists to create numpy arrays
-        val_logits_array = np.concatenate(val_logits_list, axis=0)
-        val_gt_traj_array = np.concatenate(val_gt_traj_list, axis=0)
-    else:
-        val_logits_array = np.load(val_logits_file)
-        val_gt_traj_array = np.load(val_gt_traj_file)
+        val_logits_array = np.concatenate(val_logits_list, axis=0) # To flower
+        val_gt_traj_array = np.concatenate(val_gt_traj_list, axis=0) # To flower
+    else: # To flower
+        val_logits_array = np.load(val_logits_file) # To flower
+        val_gt_traj_array = np.load(val_gt_traj_file) # To flower
         # Concatenate the lists to create numpy arrays
-        val_logits_array = np.concatenate([val_logits_array] + val_logits_list, axis=0)
-        val_gt_traj_array = np.concatenate([val_gt_traj_array] + val_gt_traj_list, axis=0)
+        val_logits_array = np.concatenate([val_logits_array] + val_logits_list, axis=0) # To flower
+        val_gt_traj_array = np.concatenate([val_gt_traj_array] + val_gt_traj_list, axis=0) # To flower
     # save numpy arrays in files
-    np.save(val_logits_file, val_logits_array)
-    np.save(val_gt_traj_file, val_gt_traj_array)
+    np.save(val_logits_file, val_logits_array) # To flower
+    np.save(val_gt_traj_file, val_gt_traj_array) # To flower
   
 
     # Print losses for this epoch
-    thisResult = f"Epoch [{epoch+1}/{num_epochs}]: Training loss: {train_epochLoss/train_total:.5f} | Validation loss: {val_epochLoss/val_total:.5f} || Training accuracy: {train_correct/train_total*100:.1f} % | Validation accuracy: {val_correct/val_total*100:.1f} %\n"
-    with open(f'{file_path}_loss_and_acc.txt', "a") as file:
-        file.write(thisResult)  # Append the text to the file
-    print(thisResult)
+    thisResult = f"Epoch [{epoch+1}/{num_epochs}]: Training loss: {train_epochLoss/train_total:.5f} | Validation loss: {val_epochLoss/val_total:.5f} || Training accuracy: {train_correct/train_total*100:.1f} % | Validation accuracy: {val_correct/val_total*100:.1f} %\n"  # To flower
+    with open(f'{file_path}_loss_and_acc.txt', "a") as file: # To flower
+        file.write(thisResult) # To flower
+    print(thisResult)  # Not To flower
     
     # Save weights every epoch
-    torch.save(covernet.state_dict(), f'{file_path}_weights.pth')
+    torch.save(covernet.state_dict(), f'{file_path}_weights.pth') # To flower
 
 
 # Training complete

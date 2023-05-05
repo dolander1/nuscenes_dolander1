@@ -38,7 +38,7 @@ class NuscenesDataset(Dataset):
 
 ################################################################################################################################################
 # Load data
-version = "v1.0-mini" # v1.0-mini, v1.0-trainval
+version = "v1.0-trainval" # v1.0-mini, v1.0-trainval
 seconds_of_history_used = 2.0 # 2.0
 sequences_per_instance = "one_sequences_per_instance" # one_sequences_per_instance, non_overlapping_sequences_per_instance, all_sequences_per_instance, 
 
@@ -50,7 +50,7 @@ val_img_tensor_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/
 val_agent_state_vector_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/val_agent_state_vector_list.pt")
 val_future_xy_local_list = torch.load(f"dataLists/{version}/{sequences_per_instance}/{seconds_of_history_used}/val_future_xy_local_list.pt")
 
-scale_factor = 1/10 # downsample images
+scale_factor = 1/50 # downsample images
 # Squeeze for correct dimensions
 for i, train_img_tensor in enumerate(train_img_tensor_list):
     dummy = torch.nn.functional.interpolate(train_img_tensor, scale_factor=scale_factor, mode='bilinear')
@@ -93,7 +93,7 @@ num_modes = 415 # 2206, 415, 64 (match with eps_traj_set)
 eps_traj_set = 4 # 2, 4, 8 (match with num_modes)
 learning_rate = 1e-4 # From Covernet paper: fixed learning rate of 1e−4
 start_epoch = 0
-num_epochs = 2
+num_epochs = 298
 accum_iter = 1 # batch accumulation parameter, multiplies batch_size
 
 
@@ -136,7 +136,9 @@ print("\nTraining starts:")
 results_string = "" # To flower
 train_logits_file = f'{file_path}_train_logits.npy' # To flower
 train_gt_traj_file = f'{file_path}_train_ground_truth.npy' # To flower
-val_logits_file = f'{file_path}_val_logits.npy' # To flower
+# val_logits_file = f'{file_path}_val_logits.npy' # To flower OLD
+val_indices_file = f'{file_path}_val_indices.npy' # To flower 
+val_probabilities_file = f'{file_path}_val_probabilities.npy' # To flower 
 val_gt_traj_file = f'{file_path}_val_ground_truth.npy' # To flower
 
 # Training and validation loop
@@ -218,7 +220,9 @@ for epoch in range(start_epoch,num_epochs):
     val_epochLoss = 0
     val_total = 0
     val_correct = 0
-    val_logits_list = [] # To flower
+    val_indices_list = [] # To flower
+    val_probabilities_list = [] # To flower
+#     val_logits_list = [] # To flower OLD
     val_gt_traj_list = [] # To flower
     with torch.no_grad():
         for val_batchCount, val_batch in enumerate(val_shortDataloader):
@@ -256,24 +260,48 @@ for epoch in range(start_epoch,num_epochs):
 #                 print(f"predicted = {lattice[predicted[index].item()]}") # [2, 12]
 #                 print("----------------------------------------------------------------")
                 
-            
+            k_nr_of_trajectories = 15 # how many to save
+            softmaxy = torch.nn.Softmax(dim=1)
+            probabilities = softmaxy(logits).cpu()
+#             print(f"probabilities.shape = {probabilities.shape}")
+            sortedProbabilitiesIndices = np.flip(np.array(np.argsort(probabilities, axis=-1)), axis=-1).copy()
+#             print(f"sortedProbabilitiesIndices.shape = {sortedProbabilitiesIndices.shape}")
+            sortedProbabilities = np.array(np.take_along_axis(probabilities, sortedProbabilitiesIndices, axis=-1))
+#             print(f"sortedProbabilities.shape = {sortedProbabilities.shape}")
+            top_k_indices = sortedProbabilitiesIndices[:,:k_nr_of_trajectories]
+#             print(f"top_k_indices.shape = {top_k_indices.shape}")
+            top_k_probabilities = sortedProbabilities[:,:k_nr_of_trajectories]
+#             print(f"top_k_probabilities.shape = {top_k_probabilities.shape}")
+
             # Create lists of saved data
-            val_logits_list.append(logits.cpu().numpy()) # To flower
+#             val_logits_list.append(logits.cpu().numpy()) # To flower OLD
+
+            val_indices_list.append(top_k_indices) # To flower
+            val_probabilities_list.append(top_k_probabilities) # To flower
             val_gt_traj_list.append(ground_truth_trajectory.cpu().numpy()) # To flower
 
     # Save logits and ground_truth_trajectory in separate files
     if epoch == 0: # To flower
         # Concatenate the lists to create numpy arrays
-        val_logits_array = np.concatenate(val_logits_list, axis=0) # To flower
+#         val_logits_array = np.concatenate(val_logits_list, axis=0) # To flower OLD
+        val_indices_array = np.concatenate(val_indices_list, axis=0) # To flower
+        val_probabilities_array = np.concatenate(val_probabilities_list, axis=0) # To flower
         val_gt_traj_array = np.concatenate(val_gt_traj_list, axis=0) # To flower
+        
     else: # To flower
-        val_logits_array = np.load(val_logits_file) # To flower
+#         val_logits_array = np.load(val_logits_file) # To flower OLD
+        val_indices_array = np.load(val_indices_file) # To flower
+        val_probabilities_array = np.load(val_probabilities_file) # To flower
         val_gt_traj_array = np.load(val_gt_traj_file) # To flower
         # Concatenate the lists to create numpy arrays
-        val_logits_array = np.concatenate([val_logits_array] + val_logits_list, axis=0) # To flower
+#         val_logits_array = np.concatenate([val_logits_array] + val_logits_list, axis=0) # To flower OLD
+        val_indices_array = np.concatenate([val_indices_array] + val_indices_list, axis=0) # To flower
+        val_probabilities_array = np.concatenate([val_probabilities_array] + val_probabilities_list, axis=0) # To flower
         val_gt_traj_array = np.concatenate([val_gt_traj_array] + val_gt_traj_list, axis=0) # To flower
     # save numpy arrays in files
-    np.save(val_logits_file, val_logits_array) # To flower
+#     np.save(val_logits_file, val_logits_array) # To flower OLD
+    np.save(val_indices_file, val_indices_array) # To flower
+    np.save(val_probabilities_file, val_probabilities_array) # To flower
     np.save(val_gt_traj_file, val_gt_traj_array) # To flower
   
 
